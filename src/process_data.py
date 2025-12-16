@@ -336,8 +336,8 @@ def process_data(target_year=2024, tolerance_minutes=3):
     logger.info("\n--- Feature Counts ---")
     logger.info(f"CMI Bands: {len(settings.CMI_BANDS)} ({', '.join(settings.CMI_BANDS[:3])}...)")
     logger.info(f"Embeddings: {len(settings.EMBEDDINGS)} (A00-A63)")
-    logger.info(f"Ancillary Features: {len(settings.ANCILLARY_FEATURES)}")
-    for f in settings.ANCILLARY_FEATURES:
+    logger.info(f"Auxiliary Features: {len(settings.AUXILIARY_FEATURES)}")
+    for f in settings.AUXILIARY_FEATURES:
         logger.info(f"  - {f}")
     logger.info(f"Climate Divisions: {len(settings.CLIMATE_DIVISIONS)}")
     

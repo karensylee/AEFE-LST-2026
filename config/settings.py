@@ -18,9 +18,9 @@ EMBEDDINGS = [f'A{i:02d}' for i in range(64)]
 # Split keys (for identification/splitting, NOT for training)
 SPLIT_KEYS = ['SITE_ID', 'LOCAL_TIME', 'ACMC_BCM']
 
-# Ancillary Features (Numeric, used for training)
-# Ancillary Features (Numeric, used for training)
-ANCILLARY_FEATURES = [
+# Auxiliary Features (Numeric, used for training)
+# Auxiliary Features (Numeric, used for training)
+AUXILIARY_FEATURES = [
     'Elevation', 
     'SZA_sin', 'SZA_cos', 
     'SAA_sin', 'SAA_cos', 
@@ -29,7 +29,7 @@ ANCILLARY_FEATURES = [
 ]
 
 # All metadata columns to load
-METADATA = SPLIT_KEYS + ANCILLARY_FEATURES
+METADATA = SPLIT_KEYS + AUXILIARY_FEATURES
 
 # Climate Divisions (One-Hot Encoded)
 CLIMATE_DIVISIONS = [
@@ -40,12 +40,12 @@ CLIMATE_DIVISIONS = [
 
 # Feature Groups Definition (Must only contain numeric features for XGBoost)
 FEATURE_SETS = {
-    'BLM': ANCILLARY_FEATURES + [f'CMI_C{i:02d}' for i in range(13, 17)],       # Baseline
-    'BLAM': ANCILLARY_FEATURES + [f'CMI_C{i:02d}' for i in range(13, 17)] + EMBEDDINGS, # Baseline + AEFE
-    'CIM': ANCILLARY_FEATURES + CMI_BANDS,                                       # CMI Only
-    'CIAM': ANCILLARY_FEATURES + CMI_BANDS + EMBEDDINGS,                         # CMI + AEFE
-    'BLAM-C': ANCILLARY_FEATURES + EMBEDDINGS,                                   # Baseline + AEFE - CMI (Embeddings + Ancillary)
-    'BLHIM': ANCILLARY_FEATURES + [f'CMI_C{i:02d}' for i in range(13, 17)] + CLIMATE_DIVISIONS # Baseline + one hot encoded HICLIMATEDIVISION
+    'BLM': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(13, 17)],       # Baseline
+    'BLAM': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(13, 17)] + EMBEDDINGS, # Baseline + AEFE
+    'CIM': AUXILIARY_FEATURES + CMI_BANDS,                                       # CMI Only
+    'CIAM': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,                         # CMI + AEFE
+    'BLAM-C': AUXILIARY_FEATURES + EMBEDDINGS,                                   # Baseline + AEFE - CMI (Embeddings + Auxiliary)
+    'BLHIM': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(13, 17)] + CLIMATE_DIVISIONS # Baseline + one hot encoded HICLIMATEDIVISION
 }
 
 # Scaling Configuration

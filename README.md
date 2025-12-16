@@ -8,7 +8,7 @@ This project trains XGBoost models to predict land surface temperature (Tsrf) by
 - **Ground truth**: Hawaii Mesonet station temperature measurements (Tsrf_1_Avg)
 - **Satellite features**: GOES-18 MCMIPC Cloud Moisture Imagery bands (CMI_C01-C16)
 - **Embeddings**: AlphaEarth geospatial embeddings (64-dim)
-- **Ancillary**: Elevation, cyclical time and solar position features (two components per feature: DOY, hour of day, SZA, SAA)
+- **Auxiliary**: Elevation, cyclical time and solar position features (two components per feature: DOY, hour of day, SZA, SAA)
 
 ## Requirements
 
@@ -85,9 +85,9 @@ python main.py --model_type BLAM --tune
 **Available model types** (defined in `config/settings.py`):
 | Model | Features |
 |-------|----------|
-| BLM | Baseline (CMI C13-C16 + ancillary) |
+| BLM | Baseline (CMI C13-C16 + auxiliary) |
 | BLAM | Baseline + AlphaEarth embeddings |
-| CIM | All CMI bands + ancillary |
+| CIM | All CMI bands + auxiliary |
 | CIAM | All CMI + embeddings |
 | BLHIM | Baseline + climate divisions |
 
