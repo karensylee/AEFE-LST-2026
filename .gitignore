@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+.venv
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+
+# Data
+*.csv
+*.nc
+*.h5
+*.joblib
+*.pkl
+datasets/raw/
+datasets/processed/
+models/
+figures/
+logs/
+temp_predictions/
+
+# Secrets (Specific exclusions if known, otherwise generic)
+*token*
+*secret*
+*key*
+
+# Keeping structure but ignoring content
+# (Optional: use .gitkeep in folders if we want to track them)
