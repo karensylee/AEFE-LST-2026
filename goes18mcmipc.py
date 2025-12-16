@@ -106,8 +106,8 @@ satellite = ee.ImageCollection("NOAA/GOES/18/MCMIPC").filterDate('2024-01-01', '
 
 def sample_goes_neg5min(timestamp_str):
     currentDate = ee.Date(timestamp_str)
-    # Window: [-4 min, 0 min)
-    windowStart = currentDate.advance(-4, 'minute') #important: advance(-4 goes back 4 minutes.
+    # Window: [-5 min, 0 min)
+    windowStart = currentDate.advance(-5, 'minute') #important: advance(-5 goes back -5minutes.
     
     # Get most recent image in window
     image = satellite.filterDate(windowStart, currentDate).sort('system:time_start', False).first()
