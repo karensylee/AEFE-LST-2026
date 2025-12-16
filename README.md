@@ -85,7 +85,7 @@ python main.py --model_type BLAM --tune
 **Available model types** (defined in `config/settings.py`):
 | Model | Features |
 |-------|----------|
-| BLM | Baseline (CMI C13-C16 + auxiliary) |
+| BLM | Baseline (CMI C01-C16 + auxiliary) |
 | BLAM | Baseline + AlphaEarth embeddings |
 | BLAM-C | Embeddings + auxiliary (no CMI) |
 | CIM | All CMI bands + auxiliary |
