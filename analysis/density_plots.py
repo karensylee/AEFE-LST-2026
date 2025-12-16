@@ -83,8 +83,8 @@ def plot_density_fig(df, title, vmin, vmax, save_path, station_id=None,
         full_title = title
     ax.set_title(full_title)
 
-    ax.set_xlabel('Ground Station LST (Tsrf)')
-    ax.set_ylabel('Predicted LST (Tsrf)')
+    ax.set_xlabel('Ground Station LST (K)')
+    ax.set_ylabel('Predicted LST (K)')
 
     # Metrics Box
     ax.text(

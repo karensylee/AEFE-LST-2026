@@ -14,8 +14,9 @@ def main():
 
     print(f"--- Starting Pipeline for {args.model_type} ---")
     
-    # Setup
-    os.makedirs(settings.OUTPUT_DIR, exist_ok=True)
+    # Setup - Create nested directory structure for model type
+    model_output_dir = os.path.join(settings.OUTPUT_DIR, 'xgb', args.model_type)
+    os.makedirs(model_output_dir, exist_ok=True)
     os.makedirs(settings.TEMP_PRED_DIR, exist_ok=True)
     
     # Load Data
@@ -101,12 +102,12 @@ def main():
         output_df.to_csv(pred_file, index=False)
         
         # Save Model
-        joblib.dump(model, os.path.join(settings.OUTPUT_DIR, f"model_{args.model_type}_{station}.joblib"))
+        joblib.dump(model, os.path.join(model_output_dir, f"model_{station}.joblib"))
 
     # Save Aggregate Results
     if all_results:
         results_df = pd.DataFrame(all_results)
-        results_path = os.path.join(settings.OUTPUT_DIR, f"results_{args.model_type}.csv")
+        results_path = os.path.join(model_output_dir, f"results_{args.model_type}.csv")
         results_df.to_csv(results_path, index=False)
         print(f"Saved aggregate results to {results_path}")
 

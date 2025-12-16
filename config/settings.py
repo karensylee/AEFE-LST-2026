@@ -4,12 +4,12 @@ import os
 # Adjusted to be relative to where the script is run, or user can override via env vars
 BASE_DIR = os.getenv('LST_PROJECT_ROOT', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Assuming the data is in data/processed relative to project root, or absolute path
-DATA_PATH = os.getenv('LST_DATA_PATH', os.path.join(BASE_DIR, 'datasets/processed/ML_READY_lst_2024.csv'))
-OUTPUT_DIR = os.path.join(BASE_DIR, 'models')
-TEMP_PRED_DIR = os.path.join(OUTPUT_DIR, 'temp_predictions')
+DATA_PATH = os.getenv('LST_DATA_PATH', os.path.join(BASE_DIR, 'datasets/processed/ML_READY_mesonet_goes_embeddings_2024.csv'))
+OUTPUT_DIR = os.path.join(BASE_DIR, 'models')  # Base models dir, will be structured as models/xgb/{model_type}/
+TEMP_PRED_DIR = os.path.join(OUTPUT_DIR, 'temp_predictions')  # Temporary predictions for analysis
 
 # Target Definition
-TARGET_COL = 'Tsrf'  # Land Surface Temperature
+TARGET_COL = 'LST'  # Land Surface Temperature
 
 # Feature Definitions
 CMI_BANDS = [f'CMI_C{i:02d}' for i in range(1, 17)]
@@ -42,10 +42,9 @@ CLIMATE_DIVISIONS = [
 FEATURE_SETS = {
     'BLM': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(13, 17)],       # Baseline
     'BLAM': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(13, 17)] + EMBEDDINGS, # Baseline + AEFE
+    'BLAM-C': AUXILIARY_FEATURES + EMBEDDINGS,                                   # Baseline + AEFE - CMI (Embeddings + Auxiliary)
     'CIM': AUXILIARY_FEATURES + CMI_BANDS,                                       # CMI Only
     'CIAM': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,                         # CMI + AEFE
-    'BLAM-C': AUXILIARY_FEATURES + EMBEDDINGS,                                   # Baseline + AEFE - CMI (Embeddings + Auxiliary)
-    'BLHIM': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(13, 17)] + CLIMATE_DIVISIONS # Baseline + one hot encoded HICLIMATEDIVISION
 }
 
 # Scaling Configuration

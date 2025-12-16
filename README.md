@@ -4,7 +4,7 @@ Machine learning pipeline for estimating Land Surface Temperature using GOES-18 
 
 ## Overview
 
-This project trains XGBoost models to predict land surface temperature (Tsrf) by combining:
+This project trains XGBoost models to predict land surface temperature (LST) by combining:
 - **Ground truth**: Hawaii Mesonet station temperature measurements (Tsrf_1_Avg)
 - **Satellite features**: GOES-18 MCMIPC Cloud Moisture Imagery bands (CMI_C01-C16)
 - **Embeddings**: AlphaEarth geospatial embeddings (64-dim)
@@ -67,14 +67,14 @@ Attaches GOES-18 ACMC cloud mask data (BCM, ACM, DQF) to the satellite samples.
 python -m src.process_data
 ```
 Merges ground + satellite data, performs feature engineering:
-- Converts Tsrf from Celsius to Kelvin
+- Converts LST from Celsius to Kelvin
 - Filters unreasonable temperatures (240-373K)
 - Calibrates CMI bands
 - Computes solar position (SZA, SAA)
 - Creates cyclical time features
 - Merges AlphaEarth embeddings
 
-**Output**: `datasets/processed/ML_READY_lst_2024.csv`
+**Output**: `datasets/processed/ML_READY_mesonet_goes_embeddings_2024.csv`
 
 ### Step 5: Train Models
 ```bash
@@ -87,11 +87,11 @@ python main.py --model_type BLAM --tune
 |-------|----------|
 | BLM | Baseline (CMI C13-C16 + auxiliary) |
 | BLAM | Baseline + AlphaEarth embeddings |
+| BLAM-C | Embeddings + auxiliary (no CMI) |
 | CIM | All CMI bands + auxiliary |
 | CIAM | All CMI + embeddings |
-| BLHIM | Baseline + climate divisions |
 
-**Output**: `models/` (trained models + results CSVs)
+**Output**: `models/xgb/{model_type}/` (trained models + results CSVs)
 
 ### Step 6: Generate Analysis Plots
 ```bash
@@ -116,7 +116,13 @@ lst/
 │   ├── raw/                  # Downloaded data (gitignored)
 │   ├── processed/            # ML-ready CSVs (gitignored)
 │   └── stations/             # Station metadata
-├── models/                   # Trained models (gitignored)
+├── models/
+│   └── xgb/                  # XGBoost models by type
+│       ├── BLM/
+│       ├── BLAM/
+│       ├── BLAM-C/
+│       ├── CIM/
+│       └── CIAM/
 ├── figures/                  # Generated plots
 ├── download.py               # Ground data download
 ├── goes18mcmipc.py           # GOES MCMIPC download

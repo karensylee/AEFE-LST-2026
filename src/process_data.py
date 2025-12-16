@@ -132,7 +132,7 @@ def process_data(target_year=2024, tolerance_minutes=3):
         ground_df['station_id'] = ground_df['station_id'].astype(str).str.strip().str.replace(r'\.0$', '', regex=True).str.zfill(4)
         
         # Rename
-        ground_df.rename(columns={'timestamp': 'date_time', 'value': 'Tsrf'}, inplace=True)
+        ground_df.rename(columns={'timestamp': 'date_time', 'value': 'LST'}, inplace=True)
         ground_df['date_time'] = pd.to_datetime(ground_df['date_time'], utc=True, errors='coerce')
         
         # Filter
@@ -146,7 +146,7 @@ def process_data(target_year=2024, tolerance_minutes=3):
         
         # Dedup and sort
         ground_df_filtered.drop_duplicates(subset=['date_time'], inplace=True)
-        ground_df_filtered.dropna(subset=['date_time', 'Tsrf'], inplace=True)
+        ground_df_filtered.dropna(subset=['date_time', 'LST'], inplace=True)
         ground_df_filtered.sort_values('date_time', inplace=True)
         
         goes_rows = len(goes_station_df)
@@ -159,7 +159,7 @@ def process_data(target_year=2024, tolerance_minutes=3):
         # Merge AsOf
         merged_df = pd.merge_asof(
             left=goes_station_df,
-            right=ground_df_filtered[['date_time', 'Tsrf', 'station_id']],
+            right=ground_df_filtered[['date_time', 'LST', 'station_id']],
             left_on='sample_time',
             right_on='date_time',
             by='station_id',
@@ -168,7 +168,7 @@ def process_data(target_year=2024, tolerance_minutes=3):
             allow_exact_matches=True
         )
         
-        merged_df.dropna(subset=['date_time', 'Tsrf'], inplace=True)
+        merged_df.dropna(subset=['date_time', 'LST'], inplace=True)
         merged_rows = len(merged_df)
         
         logger.info(f"  - Merged {merged_rows} rows for station {station_id}.")
@@ -197,15 +197,15 @@ def process_data(target_year=2024, tolerance_minutes=3):
     rows_after_dqf = len(final_df)
     logger.info(f"Row count after DQF filter (ACMC_DQF == 0): {rows_after_dqf}")
     
-    # Convert Tsrf from Celsius to Kelvin
-    logger.info("Converting Tsrf from Celsius to Kelvin...")
-    final_df['Tsrf'] = pd.to_numeric(final_df['Tsrf'], errors='coerce')
-    final_df['Tsrf'] = final_df['Tsrf'] + 273.15
+    # Convert LST from Celsius to Kelvin
+    logger.info("Converting LST from Celsius to Kelvin...")
+    final_df['LST'] = pd.to_numeric(final_df['LST'], errors='coerce')
+    final_df['LST'] = final_df['LST'] + 273.15
     
     # Filter unreasonable temperatures (240K to 373K)
     logger.info("Filtering unreasonable temperatures (240K - 373K)...")
     rows_before_temp_filter = len(final_df)
-    final_df = final_df[final_df['Tsrf'].between(240, 373)]
+    final_df = final_df[final_df['LST'].between(240, 373)]
     rows_after_temp_filter = len(final_df)
     logger.info(f"Row count after temperature filter: {rows_after_temp_filter} (removed {rows_before_temp_filter - rows_after_temp_filter} rows)")
     
