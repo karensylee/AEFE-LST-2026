@@ -42,7 +42,7 @@ def process_data(target_year=2024, tolerance_minutes=3):
     # Define Paths
     BASE_DIR = settings.BASE_DIR
     GROUND_DATA_PATH = os.path.join(BASE_DIR, 'datasets/raw/Tsrf_1_Avg')
-    GOES_DATA_PATH = os.path.join(BASE_DIR, 'datasets/raw/goes18cmipc/goes18_lst_samples_2024.csv')
+    GOES_DATA_PATH = os.path.join(BASE_DIR, 'datasets/raw/goes18acmc/goes18_lst_samples_2024_ACMC.csv')
     EMBEDDINGS_PATH = os.path.join(BASE_DIR, 'datasets/raw/aef/hawaii_station_alphaearth_embeddings_2024.csv')
     FINAL_OUTPUT_PATH = settings.DATA_PATH
     
