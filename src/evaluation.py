@@ -26,7 +26,7 @@ def calculate_metrics(y_true, y_pred, cloud_mask=None):
     Args:
         y_true (np.array): True values.
         y_pred (np.array): Predicted values.
-        cloud_mask (np.array): Binary/Category array for cloud condition (1=Clear, 0=Cloudy).
+        cloud_mask (np.array): Binary Cloud Mask (BCM) array (0=Clear-sky, 1=Cloudy-sky).
         
     Returns:
         dict: Dictionary containing metrics.
@@ -41,8 +41,9 @@ def calculate_metrics(y_true, y_pred, cloud_mask=None):
     }
     
     if cloud_mask is not None:
-        clear_mask = (cloud_mask == 1)
-        cloudy_mask = (cloud_mask == 0)
+        # BCM convention: 0 = clear-sky, 1 = cloudy-sky
+        clear_mask = (cloud_mask == 0)
+        cloudy_mask = (cloud_mask == 1)
         
         # Clear Sky
         if np.sum(clear_mask) > 0:

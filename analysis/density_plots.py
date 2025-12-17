@@ -176,15 +176,16 @@ def main():
     print(f"[Step 5] Generating GLOBAL plots...")
 
     # Define tasks for each model
+    # BCM convention: 0 = clear-sky, 1 = cloudy-sky
     global_tasks_data = {
         # BLM Model
-        'BLM (Clear-Sky)': blm_df[blm_df['sky_condition'] == 1],
-        'BLM (Cloudy-Sky)': blm_df[blm_df['sky_condition'] == 0],
+        'BLM (Clear-Sky)': blm_df[blm_df['sky_condition'] == 0],
+        'BLM (Cloudy-Sky)': blm_df[blm_df['sky_condition'] == 1],
         'BLM (All-Sky)': blm_df,
 
         # BLHIM Model
-        'BLHIM (Clear-Sky)': blhim_df[blhim_df['sky_condition'] == 1],
-        'BLHIM (Cloudy-Sky)': blhim_df[blhim_df['sky_condition'] == 0],
+        'BLHIM (Clear-Sky)': blhim_df[blhim_df['sky_condition'] == 0],
+        'BLHIM (Cloudy-Sky)': blhim_df[blhim_df['sky_condition'] == 1],
         'BLHIM (All-Sky)': blhim_df,
     }
 
@@ -215,15 +216,16 @@ def main():
         blm_stat_df = blm_df[blm_df['station_id'] == station_id]
         blhim_stat_df = blhim_df[blhim_df['station_id'] == station_id]
 
+        # BCM convention: 0 = clear-sky, 1 = cloudy-sky
         station_tasks_data = {
             # BLM
-            'BLM (Clear-Sky)': blm_stat_df[blm_stat_df['sky_condition'] == 1],
-            'BLM (Cloudy-Sky)': blm_stat_df[blm_stat_df['sky_condition'] == 0],
+            'BLM (Clear-Sky)': blm_stat_df[blm_stat_df['sky_condition'] == 0],
+            'BLM (Cloudy-Sky)': blm_stat_df[blm_stat_df['sky_condition'] == 1],
             'BLM (All-Sky)': blm_stat_df,
 
             # BLHIM
-            'BLHIM (Clear-Sky)': blhim_stat_df[blhim_stat_df['sky_condition'] == 1],
-            'BLHIM (Cloudy-Sky)': blhim_stat_df[blhim_stat_df['sky_condition'] == 0],
+            'BLHIM (Clear-Sky)': blhim_stat_df[blhim_stat_df['sky_condition'] == 0],
+            'BLHIM (Cloudy-Sky)': blhim_stat_df[blhim_stat_df['sky_condition'] == 1],
             'BLHIM (All-Sky)': blhim_stat_df,
         }
 
