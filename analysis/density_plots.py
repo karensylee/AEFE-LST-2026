@@ -1,6 +1,6 @@
 """
 Density Plot Analysis for LST Predictions
-Generates density plots comparing predicted vs actual LST for BLM and BLHIM models.
+Generates density plots comparing predicted vs actual LST for BLM and BLAM models.
 """
 
 import numpy as np
@@ -59,10 +59,10 @@ def plot_density_fig(df, title, vmin, vmax, save_path, station_id=None,
     metrics_text = (
         f"n = {n:,}\n"
         f"R²: {r2:.2f}\n"
-        f"RMSE: {rmse:.2f} W/m²\n"
-        f"Bias: {bias:.2f} W/m²\n"
-        f"Median: {med_err:.2f} W/m²\n"
-        f"STD: {std_err:.2f} W/m²"
+        f"RMSE: {rmse:.2f} K\n"
+        f"Bias: {bias:.2f} K\n"
+        f"Median: {med_err:.2f} K\n"
+        f"STD: {std_err:.2f} K"
     )
 
     hb = ax.hexbin(
@@ -142,11 +142,11 @@ def main():
     blm_df = load_predictions('BLM')
     print(f"  Loaded {len(blm_df)} BLM prediction rows")
     
-    # Load BLHIM predictions (same files since we just trained, 
+    # Load BLAM predictions (same files since we just trained, 
     # but in practice you'd have separate prediction runs)
-    print("Loading BLHIM predictions...")
-    blhim_df = load_predictions('BLHIM')
-    print(f"  Loaded {len(blhim_df)} BLHIM prediction rows")
+    print("Loading BLAM predictions...")
+    blhim_df = load_predictions('BLAM')
+    print(f"  Loaded {len(blhim_df)} BLAM prediction rows")
     
     print(f"[Step 2] All data loaded in {time.time() - t1:.2f} s")
 
@@ -183,10 +183,10 @@ def main():
         'BLM (Cloudy-Sky)': blm_df[blm_df['sky_condition'] == 1],
         'BLM (All-Sky)': blm_df,
 
-        # BLHIM Model
-        'BLHIM (Clear-Sky)': blhim_df[blhim_df['sky_condition'] == 0],
-        'BLHIM (Cloudy-Sky)': blhim_df[blhim_df['sky_condition'] == 1],
-        'BLHIM (All-Sky)': blhim_df,
+        # BLAM Model
+        'BLAM (Clear-Sky)': blhim_df[blhim_df['sky_condition'] == 0],
+        'BLAM (Cloudy-Sky)': blhim_df[blhim_df['sky_condition'] == 1],
+        'BLAM (All-Sky)': blhim_df,
     }
 
     for title, df in global_tasks_data.items():
@@ -223,10 +223,10 @@ def main():
             'BLM (Cloudy-Sky)': blm_stat_df[blm_stat_df['sky_condition'] == 1],
             'BLM (All-Sky)': blm_stat_df,
 
-            # BLHIM
-            'BLHIM (Clear-Sky)': blhim_stat_df[blhim_stat_df['sky_condition'] == 0],
-            'BLHIM (Cloudy-Sky)': blhim_stat_df[blhim_stat_df['sky_condition'] == 1],
-            'BLHIM (All-Sky)': blhim_stat_df,
+            # BLAM
+            'BLAM (Clear-Sky)': blhim_stat_df[blhim_stat_df['sky_condition'] == 0],
+            'BLAM (Cloudy-Sky)': blhim_stat_df[blhim_stat_df['sky_condition'] == 1],
+            'BLAM (All-Sky)': blhim_stat_df,
         }
 
         for title, df in station_tasks_data.items():
