@@ -43,8 +43,8 @@ FEATURE_SETS = {
     'BLM': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)],       # Baseline
     'BLAM': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)] + EMBEDDINGS, # Baseline + AEFE
     'BLAM-C': AUXILIARY_FEATURES + EMBEDDINGS,                                   # Baseline + AEFE - CMI (Embeddings + Auxiliary)
-    'CIM': AUXILIARY_FEATURES + CMI_BANDS,                                       # CMI Only
-    'CIAM': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,                         # CMI + AEFE
+    'CIM': CMI_BANDS,                                       # CMI Only
+    'CIAM': CMI_BANDS + EMBEDDINGS,                         # CMI + AEFE
 }
 
 # Scaling Configuration
