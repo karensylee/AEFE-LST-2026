@@ -36,7 +36,7 @@ def setup_logging(log_path):
     
     return logger
 
-def process_data(target_year=2024, tolerance_minutes=3):
+def process_data(target_year=2024, tolerance_minutes=5):
     start_time = time.time()
     
     # Define Paths
@@ -56,7 +56,7 @@ def process_data(target_year=2024, tolerance_minutes=3):
     logger.info("LST DATA PROCESSING PIPELINE")
     logger.info("=" * 60)
     logger.info(f"Target Year: {target_year}")
-    logger.info(f"Tolerance: {tolerance_minutes} minutes")
+    logger.info(f"Tolerance: -{tolerance_minutes} minutes (backward)")
     logger.info(f"Ground Data Dir: {GROUND_DATA_PATH}")
     logger.info(f"GOES Data Path: {GOES_DATA_PATH}")
     logger.info(f"Embeddings Path: {EMBEDDINGS_PATH}")
@@ -156,14 +156,14 @@ def process_data(target_year=2024, tolerance_minutes=3):
         if ground_df_filtered.empty:
             continue
             
-        # Merge AsOf
+        # Merge AsOf - backward direction matches ground obs <= GOES time
         merged_df = pd.merge_asof(
             left=goes_station_df,
             right=ground_df_filtered[['date_time', 'LST', 'station_id']],
             left_on='sample_time',
             right_on='date_time',
             by='station_id',
-            direction='nearest',
+            direction='backward',
             tolerance=pd.Timedelta(minutes=tolerance_minutes),
             allow_exact_matches=True
         )

@@ -1,7 +1,10 @@
 import xgboost as xgb
 import optuna
-from sklearn.metrics import r2_score
+from optuna.samplers import TPESampler
+from sklearn.metrics import r2_score, mean_squared_error
+import numpy as np
 from config import settings
+
 
 def objective(trial, X_train, y_train, X_val, y_val):
     """
@@ -15,7 +18,6 @@ def objective(trial, X_train, y_train, X_val, y_val):
         'reg_alpha': trial.suggest_float('reg_alpha', 0, 1),
         'reg_lambda': trial.suggest_float('reg_lambda', 0.1, 5, log=True),
         'n_estimators': 1000,  # Max value, early stopping will find optimum
-        # 'device': 'cuda', # Using settings or auto-detect to avoid crash in CPU env
         'tree_method': 'hist',
         'random_state': settings.RANDOM_STATE,
         'early_stopping_rounds': 20
@@ -32,36 +34,79 @@ def objective(trial, X_train, y_train, X_val, y_val):
     
     preds = model.predict(X_val)
     r2 = r2_score(y_val, preds)
+    rmse = np.sqrt(mean_squared_error(y_val, preds))
     
-    # Store best iteration
+    # Store metrics for retrieval
     trial.set_user_attr('best_iteration', model.best_iteration)
+    trial.set_user_attr('val_rmse', rmse)
     
     return r2
 
-def tune_hyperparameters(X, y, n_trials=50, random_state=42):
+
+def tune_hyperparameters(X, y, n_trials=100, random_state=None):
     """
     Runs Optuna study to find best hyperparameters.
     Splits input X, y into internal train/val for the study.
+    
+    Args:
+        X: Feature array
+        y: Target array
+        n_trials: Number of Optuna trials (default 100)
+        random_state: Random state for reproducibility
+        
+    Returns:
+        dict: Best hyperparameters including optimal n_estimators
     """
     from sklearn.model_selection import train_test_split
     
-    # Create an internal split for tuning
-    # Note: In a real scenario, this should be group-aware (by station) like in the notebook.
-    # For this function, we assume X and y are already prepped (e.g., from train_station_ids).
-    # If passed directly, standard random split is a simplification.
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=random_state)
+    if random_state is None:
+        random_state = settings.RANDOM_STATE
     
-    study = optuna.create_study(direction='maximize')
-    study.optimize(lambda t: objective(t, X_train, y_train, X_val, y_val), n_trials=n_trials)
+    # Create an internal split for tuning
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=random_state
+    )
+    
+    print(f"\n    - Tuning split: {len(X_train):,} train / {len(X_val):,} val samples")
+    print(f"    - Running {n_trials} Optuna trials...")
+    
+    study = optuna.create_study(
+        direction='maximize',
+        sampler=TPESampler(seed=random_state)
+    )
+    
+    # Suppress Optuna's default logging for cleaner output
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+    
+    study.optimize(
+        lambda t: objective(t, X_train, y_train, X_val, y_val),
+        n_trials=n_trials,
+        show_progress_bar=True
+    )
     
     best_params = study.best_params.copy()
     best_params['n_estimators'] = study.best_trial.user_attrs['best_iteration']
     
+    # Print best results
+    print(f"\n✓ Optuna Tuning Complete")
+    print(f"    - Best R²: {study.best_value:.6f}")
+    print(f"    - Best RMSE: {study.best_trial.user_attrs['val_rmse']:.4f}")
+    print(f"    - Best n_estimators: {best_params['n_estimators']}")
+    
     return best_params
+
 
 def train_final_model(X_train, y_train, params):
     """
     Trains final model with best params on provided data.
+    
+    Args:
+        X_train: Training features
+        y_train: Training targets
+        params: XGBoost parameters dict
+        
+    Returns:
+        Trained XGBRegressor model
     """
     # Ensure critical params are set
     params = params.copy()

@@ -1,6 +1,7 @@
 """
 Density Plot Analysis for LST Predictions
-Generates density plots comparing predicted vs actual LST for BLM and BLAM models.
+Generates density plots comparing predicted vs actual LST for all available models.
+Reflects logic and style from 02a_densityplots.py.
 """
 
 import numpy as np
@@ -11,6 +12,7 @@ import time
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import os
 import sys
+import argparse
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,232 +21,258 @@ if project_root not in sys.path:
 
 from config import settings
 
-# Start timing
-t0 = time.time()
+# Style settings from 02a_densityplots.py
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.size'] = 10
 
-
-def calculate_metrics_detailed(df, true_col='true', pred_col='pred'):
-    """Calculates expanded metrics for a dataframe."""
+def calculate_metrics(df, true_col='true', pred_col='pred'):
+    """
+    Calculates metrics matching 02a_densityplots.py logic.
+    Returns: RMSE, R2, Bias, Mean, STD, n
+    """
     if df.empty or len(df) < 2:
-        return (np.nan,) * 7
+        return {'rmse': np.nan, 'r2': np.nan, 'bias': np.nan, 'mean': np.nan, 'std': np.nan, 'n': 0}
 
-    error = df[pred_col] - df[true_col]
+    y_true = df[true_col].to_numpy()
+    y_pred = df[pred_col].to_numpy()
+    error = y_pred - y_true
 
-    rmse = np.sqrt(mean_squared_error(df[true_col], df[pred_col]))
-    median_err = np.median(error)
-    mean_err = np.mean(error)  # This is Bias
-    std_err = np.std(error)
-    r2 = r2_score(df[true_col], df[pred_col])
-    n = len(df)
+    metrics = {
+        'rmse': np.sqrt(mean_squared_error(y_true, y_pred)),
+        'r2': r2_score(y_true, y_pred),
+        'bias': np.mean(error),
+        'mean': np.mean(y_true), 
+        'error_std': np.std(error),
+        'n': len(df)
+    }
+    return metrics
 
-    # Return metrics in order: RMSE, Median, Mean, STD, R², n, Bias
-    return rmse, median_err, mean_err, std_err, r2, n, mean_err
-
-
-def plot_density_fig(df, title, vmin, vmax, save_path, station_id=None, 
-                     true_col='true', pred_col='pred'):
+def plot_density_fig(df, title, vmin, vmax, save_path, true_col='LST_true', pred_col='LST_pred'):
     """
     Creates, saves, and closes a density plot.
+    Matches visual style of 02a_densityplots.py.
     """
     fig, ax = plt.subplots(figsize=(7, 6))
 
-    # Calculate metrics
-    rmse, med_err, mean_err, std_err, r2, n, bias = calculate_metrics_detailed(
-        df, true_col=true_col, pred_col=pred_col
-    )
+    metrics = calculate_metrics(df, true_col=true_col, pred_col=pred_col)
 
-    # Format text strings
+    # Metrics Box matches 02a style
     metrics_text = (
-        f"n = {n:,}\n"
-        f"R²: {r2:.2f}\n"
-        f"RMSE: {rmse:.2f} K\n"
-        f"Bias: {bias:.2f} K\n"
-        f"Median: {med_err:.2f} K\n"
-        f"STD: {std_err:.2f} K"
+        f"n = {metrics['n']:,}\n"
+        f"R² = {metrics['r2']:.2f}\n"
+        f"RMSE = {metrics['rmse']:.2f} K\n"
+        f"Bias = {metrics['bias']:.2f} K\n"
+        f"STD = {metrics['error_std']:.2f} K"
     )
 
     hb = ax.hexbin(
         df[true_col],
         df[pred_col],
-        gridsize=100,  # Reduced from 1000 for typical dataset sizes
+        gridsize=100,
         cmap='plasma',
         mincnt=1,
         extent=[vmin, vmax, vmin, vmax]
     )
 
-    ax.plot([vmin, vmax], [vmin, vmax], 'k:', linewidth=1.5)
+    # 1:1 Line with label
+    ax.plot([vmin, vmax], [vmin, vmax], 'k:', linewidth=1.5, label='1:1 Line')
 
-    # Title
-    if station_id:
-        full_title = f"Station: {station_id} | {title}"
-    else:
-        full_title = title
-    ax.set_title(full_title)
-
-    ax.set_xlabel('Ground Station LST (K)')
-    ax.set_ylabel('Predicted LST (K)')
+    # Styling
+    ax.set_title(title, fontsize=12, fontweight='bold')
+    ax.set_xlabel('Ground Station LST (K)', fontsize=11)
+    ax.set_ylabel('Predicted LST (K)', fontsize=11)
 
     # Metrics Box
     ax.text(
         0.05, 0.95, metrics_text,
-        transform=ax.transAxes, fontsize=9, va='top',
-        bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.6)
+        transform=ax.transAxes, fontsize=10, va='top',
+        bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.8)
     )
 
     ax.set_aspect('equal')
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.1)
-    fig.colorbar(hb, cax=cax, label='Point Count (Density)')
+    fig.colorbar(hb, cax=cax, label='Point Count')
 
     plt.tight_layout()
 
     fig.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
-
-def load_predictions(model_type):
+def load_model_predictions():
     """
-    Load all prediction files for a given model type and combine them.
+    Dynamically loads ALL_predictions.csv for each model in specific directories.
     """
-    pred_dir = settings.TEMP_PRED_DIR
-    all_preds = []
+    models_data = {}
     
-    for f in os.listdir(pred_dir):
-        if f.startswith('pred_') and f.endswith('.csv'):
-            station_id = f.replace('pred_', '').replace('.csv', '')
-            df = pd.read_csv(os.path.join(pred_dir, f))
-            df['station_id'] = station_id
-            all_preds.append(df)
-    
-    if not all_preds:
-        raise ValueError(f"No prediction files found in {pred_dir}")
-    
-    combined = pd.concat(all_preds, ignore_index=True)
-    combined['model_type'] = model_type
-    return combined
-
+    # Iterate through potential models defined in settings
+    for model_name in settings.FEATURE_SETS.keys():
+        # Path structure: models/xgb/{MODEL_NAME}/{MODEL_NAME}_ALL_predictions.csv
+        pred_path = os.path.join(settings.OUTPUT_DIR, 'xgb', model_name, f'{model_name}_ALL_predictions.csv')
+        
+        if os.path.exists(pred_path):
+            print(f"Loading {model_name} from {pred_path}...")
+            df = pd.read_csv(pred_path)
+            models_data[model_name] = df
+        else:
+            print(f"Skipping {model_name} (File not found: {pred_path})")
+            
+    return models_data
 
 def main():
-    # --- Step 1: Define Paths and Create Base Directory ---
+    parser = argparse.ArgumentParser(description="Generate Density Plots for LST Models")
+    parser.add_argument('--per_station', action='store_true', help="Generate density plots for each station individually")
+    args = parser.parse_args()
+
+    t0 = time.time()
+    
+    # --- Step 1: Setup Paths ---
     BASE_FIG_DIR = os.path.join(settings.BASE_DIR, 'figures')
-    BASE_OUTPUT_DIR = os.path.join(BASE_FIG_DIR, 'densityplots')
+    BASE_OUTPUT_DIR = os.path.join(BASE_FIG_DIR, 'density_plots')
     os.makedirs(BASE_OUTPUT_DIR, exist_ok=True)
-    print(f"[Step 1] Base output directory created at: {BASE_OUTPUT_DIR}")
+    print(f"Output directory: {BASE_OUTPUT_DIR}")
 
-    # --- Step 2: Load ALL prediction data ---
-    t1 = time.time()
+    # --- Step 2: Load Data ---
+    print("Checking for model predictions...")
+    models_data = load_model_predictions()
     
-    # Load BLM predictions
-    print("Loading BLM predictions...")
-    blm_df = load_predictions('BLM')
-    print(f"  Loaded {len(blm_df)} BLM prediction rows")
+    if not models_data:
+        print("No prediction files found. Ensure you have run main.py to train models first.")
+        return
+
+    # --- Step 3: Compute Global Limits ---
+    print("Computing global range...")
+    all_mins = []
+    all_maxs = []
+    for df in models_data.values():
+        all_mins.append(min(df['LST_true'].min(), df['LST_pred'].min()))
+        all_maxs.append(max(df['LST_true'].max(), df['LST_pred'].max()))
     
-    # Load BLAM predictions (same files since we just trained, 
-    # but in practice you'd have separate prediction runs)
-    print("Loading BLAM predictions...")
-    blhim_df = load_predictions('BLAM')
-    print(f"  Loaded {len(blhim_df)} BLAM prediction rows")
+    if not all_mins:
+        print("No data available to plot.")
+        return
+
+    v_min_val = min(all_mins)
+    v_max_val = max(all_maxs)
     
-    print(f"[Step 2] All data loaded in {time.time() - t1:.2f} s")
+    padding = (v_max_val - v_min_val) * 0.05
+    vmin = v_min_val - padding
+    vmax = v_max_val + padding
+    print(f"Global LST range: {vmin:.1f} K to {vmax:.1f} K")
 
-    # --- Step 3: Get Station List ---
-    all_data_df = pd.concat([blm_df, blhim_df])
-    station_ids = all_data_df['station_id'].unique()
-    station_ids = sorted(station_ids)
-    print(f"[Step 3] Found {len(station_ids)} unique station_ids.")
-
-    # --- Step 4: Find GLOBAL color limits ---
-    t2 = time.time()
-    all_vals = pd.concat([
-        all_data_df['true'], all_data_df['pred']
-    ])
-    vmin, vmax = all_vals.min(), all_vals.max()
-    # Add padding
-    padding = (vmax - vmin) * 0.05
-    vmin -= padding
-    vmax += padding
-    print(f"[Step 4] Global value ranges computed: {vmin:.2f} to {vmax:.2f} W/m²")
-    
-    # Free memory
-    del all_data_df
-
-    # --- Step 5: Generate GLOBAL plots ---
-    t3 = time.time()
-    print(f"[Step 5] Generating GLOBAL plots...")
-
-    # Define tasks for each model
+    # --- Step 4: Generate Global Plots ---
     # BCM convention: 0 = clear-sky, 1 = cloudy-sky
-    global_tasks_data = {
-        # BLM Model
-        'BLM (Clear-Sky)': blm_df[blm_df['sky_condition'] == 0],
-        'BLM (Cloudy-Sky)': blm_df[blm_df['sky_condition'] == 1],
-        'BLM (All-Sky)': blm_df,
+    sky_conditions = {'Clear-Sky': 0, 'Cloudy-Sky': 1, 'All-Sky': None}
+    
+    # Store summary metrics
+    summary_results = []
 
-        # BLAM Model
-        'BLAM (Clear-Sky)': blhim_df[blhim_df['sky_condition'] == 0],
-        'BLAM (Cloudy-Sky)': blhim_df[blhim_df['sky_condition'] == 1],
-        'BLAM (All-Sky)': blhim_df,
-    }
-
-    for title, df in global_tasks_data.items():
-        filename = f"global_{title.lower().replace(' ', '_').replace('(', '').replace(')', '')}.png"
-        save_path = os.path.join(BASE_OUTPUT_DIR, filename)
-
-        if df.empty:
-            print(f"  ... skipping GLOBAL {title} (no data)")
-            continue
-
-        print(f"  ... plotting and saving GLOBAL {title}")
-        plot_density_fig(df, title, vmin, vmax, save_path, station_id=None)
-
-    print(f"[Step 5] Global plots saved in {time.time() - t3:.2f} s")
-
-    # --- Step 6: Generate plots PER-STATION ---
-    t4 = time.time()
-    print(f"[Step 6] Starting per-station plot generation...")
-
-    for i, station_id in enumerate(station_ids):
-        station_t0 = time.time()
-        print(f"\n--- Processing Station {station_id} ({i+1}/{len(station_ids)}) ---")
-
-        station_dir = os.path.join(BASE_OUTPUT_DIR, f"station_{station_id}")
-        os.makedirs(station_dir, exist_ok=True)
-
-        blm_stat_df = blm_df[blm_df['station_id'] == station_id]
-        blhim_stat_df = blhim_df[blhim_df['station_id'] == station_id]
-
-        # BCM convention: 0 = clear-sky, 1 = cloudy-sky
-        station_tasks_data = {
-            # BLM
-            'BLM (Clear-Sky)': blm_stat_df[blm_stat_df['sky_condition'] == 0],
-            'BLM (Cloudy-Sky)': blm_stat_df[blm_stat_df['sky_condition'] == 1],
-            'BLM (All-Sky)': blm_stat_df,
-
-            # BLAM
-            'BLAM (Clear-Sky)': blhim_stat_df[blhim_stat_df['sky_condition'] == 0],
-            'BLAM (Cloudy-Sky)': blhim_stat_df[blhim_stat_df['sky_condition'] == 1],
-            'BLAM (All-Sky)': blhim_stat_df,
-        }
-
-        for title, df in station_tasks_data.items():
-            filename = f"{title.lower().replace(' ', '_').replace('(', '').replace(')', '')}.png"
-            save_path = os.path.join(station_dir, filename)
-
-            if df.empty:
-                print(f"  ... skipping {title} (no data for this station)")
+    print("\nGenerating GLOBAL density plots...")
+    
+    for model_name, df in models_data.items():
+        print(f"Processing Model: {model_name}")
+        
+        # Create model subdirectory
+        model_out_dir = os.path.join(BASE_OUTPUT_DIR, model_name)
+        os.makedirs(model_out_dir, exist_ok=True)
+        
+        for sky_name, sky_val in sky_conditions.items():
+            # Filter Data
+            if sky_val is not None:
+                subset = df[df['ACMC_BCM'] == sky_val]
+            else:
+                subset = df
+                
+            if subset.empty:
+                print(f"  Skipping {sky_name} (no data)")
                 continue
+                
+            # Define Filename and Path
+            filename = f"{model_name}_{sky_name.lower().replace('-', '_')}.png"
+            save_path = os.path.join(model_out_dir, filename)
+            
+            # Plot
+            plot_density_fig(
+                subset, 
+                f"{model_name} ({sky_name})", 
+                vmin, vmax, 
+                save_path,
+                true_col='LST_true', 
+                pred_col='LST_pred'
+            )
+            
+            # Calculate metrics for summary CSV
+            m = calculate_metrics(subset, true_col='LST_true', pred_col='LST_pred')
+            summary_results.append({
+                'Model': model_name,
+                'Sky Condition': sky_name,
+                'n': m['n'],
+                'R2': m['r2'],
+                'RMSE': m['rmse'],
+                'Bias': m['bias'],
+                'STD': m['error_std']
+            })
+            
+    # --- Step 5: Save Summary CSV ---
+    if summary_results:
+        summary_df = pd.DataFrame(summary_results)
+        summary_path = os.path.join(BASE_OUTPUT_DIR, 'metrics_summary.csv')
+        summary_df.to_csv(summary_path, index=False)
+        print(f"\nGlobal metrics summary saved to: {summary_path}")
 
-            plot_density_fig(df, title, vmin, vmax, save_path, station_id=station_id)
+    # --- Step 6: Per-Station Plots (Optional) ---
+    if args.per_station:
+        print("\n" + "="*50)
+        print("GENERATING PER-STATION PLOTS")
+        print("="*50)
+        
+        for model_name, df in models_data.items():
+            print(f"\nProcessing Per-Station: {model_name}")
+            stations = sorted(df['station_id'].unique())
+            
+            # Create per-station root dir for this model
+            station_root_dir = os.path.join(BASE_OUTPUT_DIR, model_name, 'stations')
+            os.makedirs(station_root_dir, exist_ok=True)
+            
+            count = 0
+            for station in stations:
+                station_df = df[df['station_id'] == station]
+                if station_df.empty:
+                    continue
+                    
+                # Create directory for this specific station
+                station_dir = os.path.join(station_root_dir, f"station_{station}")
+                os.makedirs(station_dir, exist_ok=True)
+                
+                # Plot for each sky condition
+                for sky_name, sky_val in sky_conditions.items():
+                    if sky_val is not None:
+                        subset = station_df[station_df['ACMC_BCM'] == sky_val]
+                    else:
+                        subset = station_df
+                        
+                    if subset.empty:
+                        continue
+                        
+                    filename = f"{model_name}_{station}_{sky_name.lower().replace('-', '_')}.png"
+                    save_path = os.path.join(station_dir, filename)
+                    
+                    plot_density_fig(
+                        subset, 
+                        f"{model_name} - Station {station} ({sky_name})", 
+                        vmin, vmax, 
+                        save_path,
+                        true_col='LST_true', 
+                        pred_col='LST_pred'
+                    )
+                count += 1
+                if count % 10 == 0:
+                    print(f"  ... processed {count} stations")
+                    
+            print(f"  ✓ {model_name} per-station plots saved to {station_root_dir}")
 
-        print(f"--- Station {station_id} finished in {time.time() - station_t0:.2f} s ---")
-
-    print(f"\n[Step 6] All per-station plots saved in {time.time() - t4:.2f} s")
     print(f"\n✅ Total runtime: {time.time() - t0:.2f} s")
-    print(f"All plots saved to: {BASE_OUTPUT_DIR}")
-
 
 if __name__ == "__main__":
     main()
