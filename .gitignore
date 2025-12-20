@@ -15,20 +15,33 @@ ENV/
 .idea/
 .memory/
 
-# Data
+# Data - ignore contents but keep directory structure
+datasets/raw/**
+datasets/processed/**
+datasets/other/**
+!datasets/raw/.gitkeep
+!datasets/processed/.gitkeep
+!datasets/other/.gitkeep
+
+# Data formats (except stations CSVs)
 *.csv
+!datasets/stations/*.csv
 *.nc
 *.h5
 *.joblib
 *.pkl
-datasets/raw/
-datasets/processed/
-models/
-figures/
-logs/
-temp_predictions/
 
-# Secrets (Specific exclusions if known, otherwise generic)
+# Output directories
+models/**
+!models/.gitkeep
+figures/**
+!figures/.gitkeep
+logs/**
+!logs/.gitkeep
+temp_predictions/**
+!temp_predictions/.gitkeep
+
+# Secrets
 *token*
 *secret*
 *key*

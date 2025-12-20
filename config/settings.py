@@ -61,3 +61,14 @@ DEFAULT_XGB_PARAMS = {
 }
 
 RANDOM_STATE = 808
+
+# Aggregation QC Thresholds (Lucas et al. 2020 methodology)
+AGGREGATION_CONFIG = {
+    'min_5min_obs_per_hour': 10,  # Min 5-min observations per hour (out of 12)
+    'min_hourly_obs_per_day': 22,  # Min hourly observations per day (out of 24)
+    'require_complete_months': True,  # Require 100% daily completeness for monthly
+    'timezone': 'Pacific/Honolulu',
+}
+
+# Figure output directory
+FIGURES_DIR = os.path.join(BASE_DIR, 'figures')

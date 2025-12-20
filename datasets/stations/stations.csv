@@ -1,0 +1,54 @@
+station_id,name,full_name,status,elevation,lat,lon,location,timezone,start_date,Id,HICLIMATEDIVISION
+115,Piiholo,Piʻiholo,active,637,20.8415,-156.2948,hawaii,Pacific/Honolulu,2022-12-01T22:40:00.000Z,6,Windward Maui Nui
+116,Keokea,Kēōkea,active,871,20.7067,-156.3554,hawaii,Pacific/Honolulu,2022-12-01T01:30:00.000Z,5,Leeward Maui Nui
+118,Pulehu,Pūlehu,active,427,20.79532,-156.35991,hawaii,Pacific/Honolulu,2023-12-28T22:30:00.000Z,5,Leeward Maui Nui
+119,Kula Ag,Kula Agricultural Experiment Station,active,964,20.757889,-156.320028,hawaii,Pacific/Honolulu,2022-05-06T01:10:00.000Z,5,Leeward Maui Nui
+121,Lipoa,Līpoa,active,88,20.7458333,-156.4305556,hawaii,Pacific/Honolulu,2023-12-05T23:20:00.000Z,5,Leeward Maui Nui
+131,Lahaina WTP,Lahaina Water Treatment Plant,active,244,20.89072,-156.65493,hawaii,Pacific/Honolulu,2023-09-28T23:25:00.000Z,5,Leeward Maui Nui
+132,Olowalu,Olowalu,active,54,20.82078,-156.6152,hawaii,Pacific/Honolulu,2024-06-12T21:55:00.000Z,5,Leeward Maui Nui
+133,Honolua,Honolua,active,170,21.0012,-156.62267,hawaii,Pacific/Honolulu,2024-10-22T22:40:00.000Z,6,Windward Maui Nui
+134,Hanaula,Hanaʻula,active,1215,20.841,-156.5545,hawaii,Pacific/Honolulu,2024-10-15T22:55:00.000Z,6,Windward Maui Nui
+141,Auwahi,Auwahi,active,1177,20.644222,-156.342056,hawaii,Pacific/Honolulu,2023-04-19T03:35:00.000Z,5,Leeward Maui Nui
+144,Kahikinui,Kahikinui,active,713,20.633945,-156.273889,hawaii,Pacific/Honolulu,2023-02-09T20:55:00.000Z,5,Leeward Maui Nui
+151,Park HQ,Haleakalā Park Headquarters,active,2114,20.759806,-156.248167,hawaii,Pacific/Honolulu,2022-04-16T10:05:00.000Z,6,Windward Maui Nui
+152,Nene Nest,Nēnē Nest,active,2593,20.738194,-156.245833,hawaii,Pacific/Honolulu,2022-09-19T03:10:00.000Z,6,Windward Maui Nui
+153,Summit,Haleakalā Summit,active,2984,20.710361,-156.25675,hawaii,Pacific/Honolulu,2022-04-16T10:05:00.000Z,5,Leeward Maui Nui
+154,Waikamoi,Waikamoi,active,1935,20.773636,-156.222311,hawaii,Pacific/Honolulu,2023-02-03T22:20:00.000Z,6,Windward Maui Nui
+155,EMI Base Yard,East Maui Irrigation Company Base Yard,active,210,20.890997,-156.212316,hawaii,Pacific/Honolulu,2024-04-02T22:55:00.000Z,6,Windward Maui Nui
+161,Pohaku Palaha,Pōhaku Pālaha,active,2460,20.730574,-156.141316,hawaii,Pacific/Honolulu,2024-01-19T01:50:00.000Z,6,Windward Maui Nui
+166,Kipahulu VC,Kīpahulu Visitors Center,active,29,20.661092,-156.044767,hawaii,Pacific/Honolulu,2024-05-21T23:55:00.000Z,6,Windward Maui Nui
+201,Nahuku,Nāhuku,active,1202,19.415215,-155.238394,hawaii,Pacific/Honolulu,2023-11-01T02:20:00.000Z,12,Hilo
+202,Keaau,Keaʻau,active,182,19.6061748,-155.0515231,hawaii,Pacific/Honolulu,2024-02-07T00:30:00.000Z,12,Hilo
+204,Pahoa,Pāhoa,active,175,19.501169,-154.943731,hawaii,Pacific/Honolulu,2024-03-27T20:35:00.000Z,12,Hilo
+211,Kanakaleonui,Kanakaleonui,active,2352,19.845036,-155.362586,hawaii,Pacific/Honolulu,2023-10-09T22:35:00.000Z,12,Hilo
+212,Kulaimano,Kulaʻimano,active,260,19.834341,-155.122435,hawaii,Pacific/Honolulu,2023-10-06T00:40:00.000Z,12,Hilo
+213,Piihonua,Piʻihonua,active,606,19.7064059,-155.1873737,hawaii,Pacific/Honolulu,2023-12-07T00:35:00.000Z,12,Hilo
+214,Waipunalei,Waipunalei,active,1654,19.9090639,-155.332875,hawaii,Pacific/Honolulu,2024-09-23T15:05:00.000Z,12,Hilo
+221,Kaluamakani,Kaluamakani,active,1880,19.9153271,-155.5002897,hawaii,Pacific/Honolulu,2024-06-10T23:40:00.000Z,8,Windward Kohala
+222,Aipalaoa,Aipalaoa,active,2039,19.8541197,-155.5915919,hawaii,Pacific/Honolulu,2024-06-13T00:15:00.000Z,10,Hawaiʻi Mauka
+231,Kaiholena,Kaiholena,active,631,19.16877,-155.57035,hawaii,Pacific/Honolulu,2023-02-02T20:35:00.000Z,11,Kaʻu
+241,Keahuolu,Keahuolū,active,537,19.668669,-155.957474,hawaii,Pacific/Honolulu,2023-12-05T22:40:00.000Z,9,Kona
+242,Kaiaulu Puuwaawaa,Kaiāulu Puʻuwaʻawaʻa,active,1161,19.77241,-155.83118,hawaii,Pacific/Honolulu,2024-02-01T02:55:00.000Z,7,Leeward Kohala
+243,Kona Hema,Kona Hema,active,1283,19.2068247,-155.8109802,hawaii,Pacific/Honolulu,2023-09-23T00:45:00.000Z,9,Kona
+244,Kealakekua,Kealakekua,active,1840,19.505859,-155.762429,hawaii,Pacific/Honolulu,2024-04-18T17:05:00.000Z,9,Kona
+251,Kehena,Kehena Ditch Cabin,active,1158,20.122834,-155.749329,hawaii,Pacific/Honolulu,2023-11-07T22:20:00.000Z,8,Windward Kohala
+252,Lalamilo,Lālāmilo,active,802,20.019528,-155.677085,hawaii,Pacific/Honolulu,2023-09-29T23:00:00.000Z,8,Windward Kohala
+281,IPIF,Institute of Pacific Islands Forestry,active,112,19.69748,-155.0954,hawaii,Pacific/Honolulu,2024-01-05T00:45:00.000Z,12,Hilo
+282,Spencer,Spencer,active,469,19.96358,-155.25014,hawaii,Pacific/Honolulu,2022-04-16T07:50:00.000Z,8,Windward Kohala
+283,Laupahoehoe,Laupāhoehoe,active,1152,19.93217,-155.29129,hawaii,Pacific/Honolulu,2024-05-29T22:40:00.000Z,12,Hilo
+286,Palamanui,Pālamanui,active,264,19.73756,-155.99582,hawaii,Pacific/Honolulu,2024-07-19T22:50:00.000Z,7,Leeward Kohala
+287,Mamalahoa,Māmalahoa,active,603,19.80258,-155.850629,hawaii,Pacific/Honolulu,2022-07-07T10:05:00.000Z,7,Leeward Kohala
+288,Puuwaawaa,Puʻuwaʻawaʻa,active,1654,19.725393,-155.873917,hawaii,Pacific/Honolulu,2024-08-14T01:15:00.000Z,9,Kona
+411,Keopukaloa,Keōpukaloa,active,187,21.145283,-156.729459,hawaii,Pacific/Honolulu,2023-12-20T21:05:00.000Z,5,Leeward Maui Nui
+412,Honoulimaloo,Honoulimaloʻo,active,402,21.131411,-156.758626,hawaii,Pacific/Honolulu,2023-12-20T22:35:00.000Z,5,Leeward Maui Nui
+431,Anapuka,Anapuka,active,68,21.215984,-157.241786,hawaii,Pacific/Honolulu,2024-03-07T00:15:00.000Z,5,Leeward Maui Nui
+501,Lyon,Lyon Arboretum,active,151,21.333,-157.8025,hawaii,Pacific/Honolulu,2024-09-01T10:05:00.000Z,4,Koʻolau
+502,Nuuanu Res 1,Nuʻuanu Reservoir Number 1,active,117,21.339124,-157.836859,hawaii,Pacific/Honolulu,2022-04-16T07:50:00.000Z,4,Koʻolau
+506,Kalawahine,Kalāwahine,active,506,21.34522,-157.80556,hawaii,Pacific/Honolulu,2024-03-14T00:40:00.000Z,4,Koʻolau
+521,Kaala,Kaʻala,active,1205,21.50675,-158.144861,hawaii,Pacific/Honolulu,2023-02-01T16:05:00.000Z,3,Waianae
+541,Kaaawa Makai,Kaʻaʻawa Makai,active,3,21.540352,-157.845041,hawaii,Pacific/Honolulu,2024-04-05T00:35:00.000Z,4,Koʻolau
+551,Kalahee Ridge,Kalaheʻe Ridge,active,197,21.63252,-158.04065,hawaii,Pacific/Honolulu,2024-06-29T00:25:00.000Z,4,Koʻolau
+601,Waipa,Waipā,active,5,22.202647,-159.518833,hawaii,Pacific/Honolulu,2022-07-02T00:55:00.000Z,2,Windward Kauaʻi
+602,Common Ground,Common Ground,active,112,22.197439,-159.42123,hawaii,Pacific/Honolulu,2022-07-03T00:15:00.000Z,2,Windward Kauaʻi
+603,Lower Limahuli,Lower Limahuli,active,31,22.219805,-159.575195,hawaii,Pacific/Honolulu,2023-09-21T22:40:00.000Z,2,Windward Kauaʻi
+621,Lawai NTBG,Lāwaʻi National Tropical Botanical Garden,active,106,21.905295,-159.510395,hawaii,Pacific/Honolulu,2024-02-23T02:25:00.000Z,1,Leeward Kauaʻi
