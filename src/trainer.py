@@ -3,6 +3,7 @@ import optuna
 from optuna.samplers import TPESampler
 from sklearn.metrics import r2_score, mean_squared_error
 import numpy as np
+import gc
 from config import settings
 
 
@@ -18,6 +19,7 @@ def objective(trial, X_train, y_train, X_val, y_val):
         'reg_alpha': trial.suggest_float('reg_alpha', 0, 1),
         'reg_lambda': trial.suggest_float('reg_lambda', 0.1, 5, log=True),
         'n_estimators': 1000,  # Max value, early stopping will find optimum
+        'device': 'cuda',
         'tree_method': 'hist',
         'random_state': settings.RANDOM_STATE,
         'early_stopping_rounds': 20

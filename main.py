@@ -1,6 +1,7 @@
 import argparse
 import os
 import time
+import gc
 import joblib
 import pandas as pd
 import numpy as np
@@ -265,6 +266,10 @@ def main():
         
         fold_time = time.time() - fold_start_time
         print(f"    - Fold completed in {fold_time:.2f} seconds")
+        
+        # Memory cleanup
+        del model, X_train, y_train, X_test, y_test, preds, train_df, test_df
+        gc.collect()
 
     # --- Aggregate All Predictions ---
     print("\n--- Aggregating All Predictions ---")

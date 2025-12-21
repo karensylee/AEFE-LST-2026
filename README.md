@@ -99,6 +99,14 @@ python main.py --model_type CIM
 python main.py --model_type CIAM
 ```
 
+```bash
+python main.py --model_type BLM && \
+python main.py --model_type BLAM && \
+python main.py --model_type BLAM-C && \
+python main.py --model_type CIM && \
+python main.py --model_type CIAM
+```
+
 Optuna hyperparameter tuning (100 trials) runs automatically for each model.
 
 **Available model types** (defined in `config/settings.py`):
@@ -216,10 +224,9 @@ lst/
 ## Acknowledgments
 
 - **Brian Blaylock** for [goes2go](https://github.com/blaylockbk/goes2go)
-- **Hawaii Climate Data Portal** (HCDP) for Mesonet API access
-- **Google Earth Engine** for satellite data access
+- **Hawaii Climate Data Portal** (HCDP) for Mesonet API access and station metadata
+- **Google Earth Engine** for MCMIPC and AEFE cloud computation and access
 - **Tom Giambelluca & Han Tseng** for providing Mesonet Instrument Details
-- **Hawaii State Climate Office** for providing station metadata
 
 ## References
 
