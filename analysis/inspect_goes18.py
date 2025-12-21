@@ -1,39 +1,36 @@
-
-import pandas as pd
 import os
+import polars as pl
+from dotenv import load_dotenv
 
-# Define path
-file_path = 'datasets/raw/goes18cmipc/goes18_lst_samples_2024.csv'
-absolute_path = os.path.abspath(file_path)
+load_dotenv()
 
-print(f"--- Inspecting: {absolute_path} ---")
+base_path = os.getenv("BASE_PATH")
+file_path = os.path.join(base_path, 'datasets/raw/goes18cmipc/goes18_lst_samples_2024.csv')
 
-if not os.path.exists(file_path):
-    print(f"Error: File not found at {file_path}")
-else:
-    # Load data
-    df = pd.read_csv(file_path)
+def inspect_raw_samples(path):
+    if not os.path.exists(path):
+        print(f"Error: File not found at {path}")
+        return
 
-    # 1. Number of rows and columns (Shape)
-    rows, cols = df.shape
+    # Polars read_csv is multithreaded and significantly faster for large datasets
+    df = pl.read_csv(path)
+    
+    print(f"--- Inspecting: {os.path.abspath(path)} ---")
+
     print(f"\n1. Dimensions:")
-    print(f"   Rows: {rows}")
-    print(f"   Columns: {cols}")
+    print(f"   Rows: {df.height}")
+    print(f"   Columns: {df.width}")
 
-    # 2. Column Names
-    print(f"\n2. Column Names:")
-    print(df.columns.tolist())
+    print(f"\n2 & 3. Schema and Data Types:")
+    for col, dtype in df.schema.items():
+        print(f"   - {col}: {dtype}")
 
-    # 3. Data Types
-    print(f"\n3. Data Types:")
-    print(df.dtypes)
-
-    # 4. Unique Values Analysis
-    print(f"\n4. Unique Values per Column:")
+    print(f"\n4. Unique Values Analysis:")
     for col in df.columns:
-        n_unique = df[col].nunique()
+        n_unique = df[col].n_unique()
+        # head(10) ensures we don't overwhelm the console with large unique sets
+        sample_vals = df[col].unique().head(10).to_list()
         print(f"   - {col}: {n_unique} unique values")
-        
-        # Show sample unique values (top 10)
-        unique_vals = df[col].unique()[:10]
-        print(f"     Sample: {unique_vals}")
+        print(f"     Sample: {sample_vals}")
+
+inspect_raw_samples(file_path)

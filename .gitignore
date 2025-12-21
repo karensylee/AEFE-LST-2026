@@ -46,5 +46,9 @@ temp_predictions/**
 *secret*
 *key*
 
+# Markdown files
+*.md
+!README.md
+
 # Keeping structure but ignoring content
 # (Optional: use .gitkeep in folders if we want to track them)

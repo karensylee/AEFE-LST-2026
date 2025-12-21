@@ -4,6 +4,7 @@ Generates heatmaps comparing model performance across stations.
 Supports ordering by: station_id (default), elevation, or climate division.
 """
 
+import polars as pl
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -63,35 +64,46 @@ def load_station_metadata():
     
     # Only load the columns we need for metadata
     cols_to_load = ['station_id', 'elevation', 'Id', 'HICLIMATEDIVISION']
-    stations_df = pd.read_csv(stations_path, usecols=cols_to_load)
+    stations_df = pl.read_csv(stations_path, columns=cols_to_load)
+    
+    # Ensure strings
+    stations_df = stations_df.with_columns(pl.col('station_id').cast(pl.Utf8))
     
     return stations_df
 
 
-def load_model_predictions(model_type):
+def load_predictions(model_type):
     """
-    Load all prediction files for a given model type.
+    Load prediction data from aggregated ALL_predictions file.
     
     Args:
-        model_type: 'BLM' or 'BLAM'
+        model_type: 'BLM', 'BLAM', etc.
         
     Returns:
-        DataFrame with columns: station_id, true, pred, sky_condition
+        DataFrame with columns: station_id, LST_true, LST_pred, ACMC_BCM
     """
-    pred_dir = settings.TEMP_PRED_DIR
+    # Try aggregated file first
+    agg_path = os.path.join(settings.OUTPUT_DIR, 'xgb', model_type, f'{model_type}_ALL_predictions.csv')
+    
+    if os.path.exists(agg_path):
+        return pl.read_csv(agg_path)
+    
+    # Fallback to individual files in loso_temp_predictions
+    pred_dir = os.path.join(settings.OUTPUT_DIR, 'xgb', model_type, 'loso_temp_predictions')
     all_preds = []
     
+    if not os.path.exists(pred_dir):
+        raise ValueError(f"Predictions not found for {model_type}. Looked for:\n  - {agg_path}\n  - {pred_dir}")
+        
     for f in os.listdir(pred_dir):
-        if f.startswith('pred_') and f.endswith('.csv'):
-            station_id = f.replace('pred_', '').replace('.csv', '')
-            df = pd.read_csv(os.path.join(pred_dir, f))
-            df['station_id'] = station_id
+        if f.startswith('preds_') and f.endswith('.csv'):
+            df = pl.read_csv(os.path.join(pred_dir, f))
             all_preds.append(df)
     
     if not all_preds:
         raise ValueError(f"No prediction files found in {pred_dir}")
     
-    return pd.concat(all_preds, ignore_index=True)
+    return pl.concat(all_preds)
 
 
 def calculate_station_metrics(preds_df, stations_df):
@@ -99,51 +111,52 @@ def calculate_station_metrics(preds_df, stations_df):
     Calculate per-station metrics for all sky conditions.
     
     Args:
-        preds_df: DataFrame with predictions (columns: station_id, true, pred, sky_condition)
+        preds_df: DataFrame with predictions
         stations_df: DataFrame with station metadata
         
     Returns:
         DataFrame with per-station metrics
     """
-    results = []
+    # Conditions: All, Clear (sky_condition=0), Cloudy (sky_condition=1)
+    # Check columns
+    cols = preds_df.columns
+    if 'LST_true' in cols: preds_df = preds_df.rename({'LST_true': 'true'})
+    if 'LST_pred' in cols: preds_df = preds_df.rename({'LST_pred': 'pred'})
+    if 'ACMC_BCM' in cols: preds_df = preds_df.rename({'ACMC_BCM': 'sky_condition'})
     
-    for station_id in preds_df['station_id'].unique():
-        station_preds = preds_df[preds_df['station_id'] == station_id]
-        
-        # BCM convention: 0 = clear-sky, 1 = cloudy-sky
-        all_mask = np.ones(len(station_preds), dtype=bool)
-        clear_mask = station_preds['sky_condition'] == 0
-        cloudy_mask = station_preds['sky_condition'] == 1
-        
-        station_metrics = {'station_id': station_id}
-        
-        for condition, mask in [('all', all_mask), ('clear', clear_mask), ('cloudy', cloudy_mask)]:
-            subset = station_preds[mask]
-            
-            if len(subset) > 0:
-                residuals = subset['pred'] - subset['true']
-                station_metrics[f'mean_residual_{condition}'] = np.mean(residuals)
-                station_metrics[f'median_residual_{condition}'] = np.median(residuals)
-                station_metrics[f'rmse_{condition}'] = np.sqrt(np.mean(residuals**2))
-                station_metrics[f'std_dev_diff_{condition}'] = np.std(residuals)
-                station_metrics[f'n_{condition}'] = len(subset)
-            else:
-                station_metrics[f'mean_residual_{condition}'] = np.nan
-                station_metrics[f'median_residual_{condition}'] = np.nan
-                station_metrics[f'rmse_{condition}'] = np.nan
-                station_metrics[f'std_dev_diff_{condition}'] = np.nan
-                station_metrics[f'n_{condition}'] = 0
-        
-        results.append(station_metrics)
+    # Calculate Residuals
+    preds_df = preds_df.with_columns([
+        (pl.col('pred') - pl.col('true')).alias('residual')
+    ])
     
-    metrics_df = pd.DataFrame(results).set_index('station_id')
+    metrics_list = []
     
-    # Merge with station metadata
-    metrics_df = metrics_df.merge(
-        stations_df[['station_id', 'elevation', 'Id', 'HICLIMATEDIVISION']],
-        left_index=True,
-        right_on='station_id'
-    ).set_index('station_id')
+    conditions = {
+        'all': None,
+        'clear': pl.col('sky_condition') == 0,
+        'cloudy': pl.col('sky_condition') == 1
+    }
+    
+    for cond_name, filter_expr in conditions.items():
+        subset = preds_df if filter_expr is None else preds_df.filter(filter_expr)
+        
+        # Aggregations
+        agg = subset.group_by('station_id').agg([
+            pl.col('residual').mean().alias(f'mean_residual_{cond_name}'),
+            pl.col('residual').median().alias(f'median_residual_{cond_name}'),
+            (pl.col('residual')**2).mean().sqrt().alias(f'rmse_{cond_name}'),
+            pl.col('residual').std().alias(f'std_dev_diff_{cond_name}'), # Naming convention from original: std of resids
+            pl.len().alias(f'n_{cond_name}')
+        ])
+        metrics_list.append(agg)
+        
+    # Join all
+    metrics_df = metrics_list[0]
+    for m in metrics_list[1:]:
+        metrics_df = metrics_df.join(m, on='station_id', how='outer')
+        
+    # Join metadata
+    metrics_df = metrics_df.join(stations_df, on='station_id', how='left')
     
     return metrics_df
 
@@ -160,24 +173,43 @@ def calculate_difference_metrics(blm_metrics, blam_metrics):
     Returns:
         DataFrame with difference metrics
     """
-    diff_df = pd.DataFrame(index=blm_metrics.index)
+    # Join on station_id
+    # We need to preserve metadata from one of them (they should be same)
+    
+    # Prefix columns to avoid collision if necessary, but we are subtracting specific cols
+    
+    joined = blm_metrics.join(blam_metrics, on='station_id', suffix='_blam')
+    
+    # Original naming: blm_metrics has 'mean_residual_all', blam has 'mean_residual_all_blam' (if suffix applied)
+    # Actually join adds suffix to right table cols if collision
+    # blm cols: 'mean_residual_all', etc.
+    # blam cols: 'mean_residual_all_blam'
     
     metrics_to_diff = ['mean_residual', 'median_residual', 'rmse', 'std_dev_diff']
     conditions = ['all', 'clear', 'cloudy']
     
+    diff_exprs = []
+    
     for metric in metrics_to_diff:
         for condition in conditions:
-            col_name = f'{metric}_diff_emb_vs_base_{condition}'
-            blam_col = f'{metric}_{condition}'
-            blm_col = f'{metric}_{condition}'
+            col_base = f'{metric}_{condition}'
+            col_comp = f'{metric}_{condition}_blam'
+            col_diff = f'{metric}_diff_emb_vs_base_{condition}'
             
-            if blam_col in blam_metrics.columns and blm_col in blm_metrics.columns:
-                diff_df[col_name] = blam_metrics[blam_col] - blm_metrics[blm_col]
+            diff_exprs.append(
+                (pl.col(col_comp) - pl.col(col_base)).alias(col_diff)
+            )
+            
+    # Keep metadata
+    meta_cols = ['elevation', 'Id', 'HICLIMATEDIVISION']
+    # If they collided, they might be renamed. Elevation is in both. 
+    # 'elevation' (left), 'elevation_blam' (right).
     
-    # Add metadata columns for sorting
-    diff_df['elevation'] = blm_metrics['elevation']
-    diff_df['Id'] = blm_metrics['Id']
-    diff_df['HICLIMATEDIVISION'] = blm_metrics['HICLIMATEDIVISION']
+    diff_df = joined.select(
+        [pl.col('station_id')] + 
+        [pl.col(c) for c in meta_cols if c in joined.columns] +
+        diff_exprs
+    )
     
     return diff_df
 
@@ -195,11 +227,11 @@ def sort_dataframe(df, order_by='station_id', ascending=True):
         Sorted DataFrame
     """
     if order_by == 'station_id':
-        return df.sort_index(ascending=ascending)
+        return df.sort('station_id', descending=not ascending)
     elif order_by == 'elevation':
-        return df.sort_values('elevation', ascending=ascending)
+        return df.sort('elevation', descending=not ascending)
     elif order_by == 'division':
-        return df.sort_values('Id', ascending=ascending)
+        return df.sort('Id', descending=not ascending)
     else:
         raise ValueError(f"Unknown order_by value: {order_by}")
 
@@ -210,7 +242,7 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
     Generate and save the comparative heatmap.
     
     Args:
-        diff_df: DataFrame with difference metrics
+        diff_df: Polars DataFrame with difference metrics
         order_by: 'station_id', 'elevation', or 'division'
         ascending: Sort order
         output_dir: Directory to save the figure
@@ -221,23 +253,29 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
     # Sort data
     sorted_df = sort_dataframe(diff_df, order_by=order_by, ascending=ascending)
     
+    # Convert to Pandas for plotting
+    sorted_pd = sorted_df.to_pandas()
+    
+    # Set index for heatmap labeling
+    sorted_pd.set_index('station_id', inplace=True)
+    
     # Create plot labels based on ordering
     if order_by == 'division':
         plot_labels = [
             f"{idx} ({DIVISION_NAMES.get(row.Id, 'Unknown')})" 
-            for idx, row in sorted_df.iterrows()
+            for idx, row in sorted_pd.iterrows()
         ]
     elif order_by == 'elevation':
         plot_labels = [
             f"{idx} ({int(row.elevation)}m)" 
-            for idx, row in sorted_df.iterrows()
+            for idx, row in sorted_pd.iterrows()
         ]
     else:
-        plot_labels = list(sorted_df.index)
+        plot_labels = list(sorted_pd.index)
     
     # Prepare heatmap data (exclude metadata columns)
     metadata_cols = ['elevation', 'Id', 'HICLIMATEDIVISION']
-    heatmap_cols = [c for c in sorted_df.columns if c not in metadata_cols]
+    heatmap_cols = [c for c in sorted_pd.columns if c not in metadata_cols]
     
     # Order columns by metric type
     ordered_cols = []
@@ -250,7 +288,7 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
             if col in heatmap_cols:
                 ordered_cols.append(col)
     
-    heatmap_data = sorted_df[ordered_cols].rename(columns=COLUMN_LABELS)
+    heatmap_data = sorted_pd[ordered_cols].rename(columns=COLUMN_LABELS)
     
     # Generate plot
     plt.figure(figsize=(13, 14))
@@ -285,7 +323,7 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
     plt.xticks(rotation=90, ha='right', fontsize=9)
     
     # Color y-tick labels by division
-    tick_colors = [DIVISION_COLORS.get(row.Id, "#000000") for _, row in sorted_df.iterrows()]
+    tick_colors = [DIVISION_COLORS.get(row.Id, "#000000") for _, row in sorted_pd.iterrows()]
     for tick_label, color in zip(ax.get_yticklabels(), tick_colors):
         tick_label.set_color(color)
         tick_label.set_fontweight('bold')
@@ -350,16 +388,15 @@ def main():
     # Load station metadata
     print("\n--- Loading Station Metadata ---")
     stations_df = load_station_metadata()
-    print(f"✓ Loaded {len(stations_df)} stations")
+    print(f"✓ Loaded {stations_df.height} stations")
     
     # Load predictions for both models
     print("\n--- Loading Model Predictions ---")
     
     # For now, we'll load from temp_predictions
-    # In practice, you'd load from model-specific directories
     try:
-        preds_df = load_model_predictions('BLM')
-        print(f"✓ Loaded predictions for {preds_df['station_id'].nunique()} stations")
+        preds_df = load_predictions('BLM')
+        print(f"✓ Loaded predictions for {preds_df['station_id'].n_unique()} stations")
     except Exception as e:
         print(f"Error loading predictions: {e}")
         print("Make sure to run training first: python main.py --model_type BLM")
@@ -370,11 +407,11 @@ def main():
     blm_metrics = calculate_station_metrics(preds_df, stations_df)
     
     # For demonstration - using same predictions (replace with actual BLAM predictions)
-    blam_metrics = blm_metrics.copy()
+    blam_metrics = blm_metrics.clone() # Clone in Polars
     
     # Calculate differences
     diff_df = calculate_difference_metrics(blm_metrics, blam_metrics)
-    print(f"✓ Calculated difference metrics for {len(diff_df)} stations")
+    print(f"✓ Calculated difference metrics for {diff_df.height} stations")
     
     # Generate heatmap
     generate_heatmap(

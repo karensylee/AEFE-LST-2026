@@ -14,6 +14,7 @@ clear-sky and cloudy-sky stratification.
 """
 
 import os
+import polars as pl
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -57,9 +58,9 @@ CONDITION_STYLES = {
 }
 
 
-def load_predictions(path: str) -> pd.DataFrame:
+def load_predictions(path: str) -> pl.DataFrame:
     """Load prediction CSV and prepare for analysis."""
-    df = pd.read_csv(path)
+    df = pl.read_csv(path)
     
     # Ensure required columns exist
     required = ['LOCAL_TIME', 'LST_true', 'LST_pred']
@@ -68,40 +69,27 @@ def load_predictions(path: str) -> pd.DataFrame:
         raise ValueError(f"Missing required columns: {missing}")
     
     # Parse time and extract month info
-    df['LOCAL_TIME'] = pd.to_datetime(df['LOCAL_TIME'])
-    df['Month'] = df['LOCAL_TIME'].dt.month_name()
-    df['Month_Num'] = df['LOCAL_TIME'].dt.month
+    df = df.with_columns(pl.col('LOCAL_TIME').str.to_datetime())
+    df = df.with_columns([
+        pl.col('LOCAL_TIME').dt.strftime('%B').alias('Month'),
+        pl.col('LOCAL_TIME').dt.month().alias('Month_Num')
+    ])
     
     return df
 
 
-def calculate_metrics(group: pd.DataFrame) -> pd.Series:
-    """Calculate RMSE, R², and Bias for a group of predictions."""
-    g = group.dropna(subset=['LST_true', 'LST_pred'])
-    
-    if len(g) < 2:
-        return pd.Series({
-            'RMSE': np.nan, 'R2': np.nan, 'Bias': np.nan,
-            'Count': 0, 'Active_Stations': 0
-        })
-    
-    y_true = g['LST_true']
-    y_pred = g['LST_pred']
-    
-    return pd.Series({
-        'RMSE': np.sqrt(mean_squared_error(y_true, y_pred)),
-        'R2': r2_score(y_true, y_pred),
-        'Bias': (y_pred - y_true).mean(),
-        'Count': len(g),
-        'Active_Stations': g['station_id'].nunique() if 'station_id' in g.columns else np.nan
-    })
-
+def calculate_metrics(group: pl.DataFrame) -> pl.DataFrame:
+    """
+    Calculate RMSE, R², and Bias for a group of predictions.
+    Because Polars group_by agg is optimized, we usually inline this or use a custom aggregation.
+    """
+    pass
 
 def compute_monthly_metrics(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     model_name: str,
     cloud_col: str = 'ACMC_BCM'
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Compute monthly performance metrics stratified by cloud condition.
     
@@ -117,29 +105,69 @@ def compute_monthly_metrics(
     
     # Define sky conditions
     conditions = {
-        'Clear-Sky': df[df[cloud_col] == 0],
-        'Cloudy': df[df[cloud_col] != 0]
+        'Clear-Sky': pl.col(cloud_col) == 0,
+        'Cloudy': pl.col(cloud_col) != 0
     }
     
-    for condition, data in conditions.items():
-        if len(data) == 0:
+    for condition_name, filter_expr in conditions.items():
+        subset = df.filter(filter_expr)
+        
+        if subset.height == 0:
             continue
             
-        stats = data.groupby(['Month_Num', 'Month']).apply(
-            calculate_metrics, include_groups=False
-        ).reset_index()
-        stats['Condition'] = condition
-        stats['Model'] = model_name
-        stats['Style_Key'] = f"{model_name} {condition}"
+        # Calculate residuals
+        subset = subset.with_columns(
+            (pl.col('LST_pred') - pl.col('LST_true')).alias('residual')
+        )
+            
+        # Stats Aggregation
+        stats = subset.group_by(['Month_Num', 'Month']).agg([
+            (pl.col('residual')**2).mean().sqrt().alias('RMSE'),
+            pl.col('residual').mean().alias('Bias'),
+            pl.len().alias('Count'),
+            pl.col('station_id').n_unique().alias('Active_Stations'),
+            # Prepare R2 components: SS_res, SS_tot relative to group mean is tricky in one pass for R2 definition
+            # Actually R2 is 1 - SS_res / SS_tot
+            # SS_tot is sum((y - y.mean())^2) where y.mean() is mean of TRUE values in that group
+        ])
+
+        # To calculate R2 properly in Polars without complex window functions in agg:
+        # We can iterate or use a separate join.
+        # Let's use a separate calculation for R2 to be safe and clear.
+        
+        # Calculate SS_res per group
+        ss_res = subset.group_by(['Month_Num', 'Month']).agg(
+            (pl.col('residual')**2).sum().alias('ss_res')
+        )
+        
+        # Calculate SS_tot per group
+        # Need group mean of true
+        ss_tot = subset.group_by(['Month_Num', 'Month']).agg(
+             ((pl.col('LST_true') - pl.col('LST_true').mean())**2).sum().alias('ss_tot')
+        )
+        
+        r2_df = ss_res.join(ss_tot, on=['Month_Num', 'Month'])
+        r2_df = r2_df.with_columns(
+            (1 - pl.col('ss_res') / pl.col('ss_tot')).alias('R2')
+        )
+    
+        # Join R2 back to stats
+        stats = stats.join(r2_df.select(['Month_Num', 'Month', 'R2']), on=['Month_Num', 'Month'])
+        
+        stats = stats.with_columns([
+            pl.lit(condition_name).alias('Condition'),
+            pl.lit(model_name).alias('Model'),
+            pl.lit(f"{model_name} {condition_name}").alias('Style_Key')
+        ])
         results.append(stats)
     
-    return pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+    return pl.concat(results) if results else pl.DataFrame()
 
 
 def compute_data_statistics(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     cloud_col: str = 'ACMC_BCM'
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> Tuple[pl.DataFrame, pl.DataFrame]:
     """
     Compute sample counts and cloudiness proportion by month.
     
@@ -147,48 +175,51 @@ def compute_data_statistics(
         Tuple of (stats_df, proportion_df)
     """
     # All-sky statistics
-    all_sky = df.groupby(['Month_Num', 'Month']).apply(
-        lambda x: pd.Series({
-            'Count': len(x),
-            'Active_Stations': x['station_id'].nunique() if 'station_id' in x.columns else np.nan
-        }), include_groups=False
-    ).reset_index()
-    all_sky['Condition'] = 'All-Sky'
+    all_sky = df.group_by(['Month_Num', 'Month']).agg([
+        pl.len().alias('Count'),
+        pl.col('station_id').n_unique().alias('Active_Stations')
+    ]).with_columns(pl.lit('All-Sky').alias('Condition'))
     
     # Clear/Cloudy statistics
+    split_stats = []
     conditions = {
-        'Clear-Sky': df[df[cloud_col] == 0],
-        'Cloudy': df[df[cloud_col] != 0]
+        'Clear-Sky': pl.col(cloud_col) == 0,
+        'Cloudy': pl.col(cloud_col) != 0
     }
     
-    split_stats = []
-    for cond, data in conditions.items():
-        if len(data) == 0:
-            continue
-        stats = data.groupby(['Month_Num', 'Month']).apply(
-            lambda x: pd.Series({
-                'Count': len(x),
-                'Active_Stations': x['station_id'].nunique() if 'station_id' in x.columns else np.nan
-            }), include_groups=False
-        ).reset_index()
-        stats['Condition'] = cond
-        split_stats.append(stats)
+    for cond_name, filter_expr in conditions.items():
+        subset = df.filter(filter_expr)
+        if subset.height > 0:
+            stats = subset.group_by(['Month_Num', 'Month']).agg([
+                pl.len().alias('Count'),
+                pl.col('station_id').n_unique().alias('Active_Stations')
+            ]).with_columns(pl.lit(cond_name).alias('Condition'))
+            split_stats.append(stats)
     
-    df_stats = pd.concat([all_sky] + split_stats, ignore_index=True).sort_values('Month_Num')
+    df_stats = pl.concat([all_sky] + split_stats).sort('Month_Num')
     
     # Calculate cloudiness proportion
-    pivot = df_stats.pivot(index=['Month_Num', 'Month'], columns='Condition', values='Count').reset_index()
+    # Pivot
+    pivot = df_stats.pivot(
+        on='Condition',
+        index=['Month_Num', 'Month'],
+        values='Count',
+        aggregate_function='first' # Should be unique per month/cond
+    )
+    
     if 'All-Sky' in pivot.columns and 'Cloudy' in pivot.columns:
-        pivot['Cloudy_Proportion'] = pivot['Cloudy'] / pivot['All-Sky']
+        pivot = pivot.with_columns(
+            (pl.col('Cloudy') / pl.col('All-Sky')).alias('Cloudy_Proportion')
+        )
     else:
-        pivot['Cloudy_Proportion'] = np.nan
+        pivot = pivot.with_columns(pl.lit(np.nan).alias('Cloudy_Proportion'))
     
     return df_stats, pivot
 
 
 def plot_performance_metric(
     ax: plt.Axes,
-    df: pd.DataFrame,
+    df: pd.DataFrame, # Pandas DF for plotting
     metric: str,
     title: str,
     show_legend: bool = False
@@ -257,8 +288,11 @@ def generate_all_figures(
         print("No metrics computed. Check input files.")
         return []
     
-    df_perf = pd.concat(all_metrics, ignore_index=True).sort_values('Month_Num')
-    df_stats, df_proportion = compute_data_statistics(reference_df, cloud_col)
+    df_perf = pl.concat(all_metrics).sort('Month_Num').to_pandas()
+    df_stats_pl, df_proportion_pl = compute_data_statistics(reference_df, cloud_col)
+    
+    df_stats = df_stats_pl.to_pandas()
+    df_proportion = df_proportion_pl.to_pandas()
     
     # Create custom legend handles
     legend_handles = []
@@ -395,12 +429,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     # Build model paths dictionary
-    # Expected structure: models/xgb/{model_name}/loso_ALL_predictions_for_plotting.csv
+    # Expected structure: models/xgb/{model_name}/{model_name}_ALL_predictions.csv
     model_predictions = {}
     
     if args.models:
         for model in args.models:
-            pred_path = os.path.join(OUTPUT_DIR, 'xgb', model, 'loso_ALL_predictions_for_plotting.csv')
+            pred_path = os.path.join(OUTPUT_DIR, 'xgb', model, f'{model}_ALL_predictions.csv')
             if os.path.exists(pred_path):
                 model_predictions[model] = pred_path
             else:
@@ -410,7 +444,7 @@ if __name__ == '__main__':
         xgb_dir = os.path.join(OUTPUT_DIR, 'xgb')
         if os.path.exists(xgb_dir):
             for model_name in os.listdir(xgb_dir):
-                pred_path = os.path.join(xgb_dir, model_name, 'loso_ALL_predictions_for_plotting.csv')
+                pred_path = os.path.join(xgb_dir, model_name, f'{model_name}_ALL_predictions.csv')
                 if os.path.exists(pred_path):
                     model_predictions[model_name] = pred_path
     

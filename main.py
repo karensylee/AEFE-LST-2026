@@ -75,12 +75,12 @@ def print_feature_breakdown(features):
     print(f"\nTotal Features: {len(features)}")
 
 
-def print_paths(model_output_dir):
+def print_paths(model_output_dir, temp_pred_dir):
     """Prints output directory paths."""
     print("\n--- Output Directories ---")
     print(f"    Input Data: {settings.DATA_PATH}")
     print(f"    Model Output: {model_output_dir}")
-    print(f"    Temp Predictions: {settings.TEMP_PRED_DIR}")
+    print(f"    Temp Predictions: {temp_pred_dir}")
 
 
 def print_final_summary(all_results, model_type, total_time):
@@ -101,21 +101,21 @@ def print_final_summary(all_results, model_type, total_time):
     print("-" * 65)
     
     # Overall metrics
-    for metric in ['r2_overall', 'rmse_overall', 'mae_overall', 'mre_overall']:
+    for metric in ['r2_overall', 'rmse_overall', 'mae_overall', 'mre_overall', 'bias_overall']:
         if metric in results_df.columns:
             values = results_df[metric].dropna()
             if len(values) > 0:
                 print(f"{metric:<25} {values.mean():>10.4f} {values.std():>10.4f} {values.min():>10.4f} {values.max():>10.4f}")
     
     # Clear-sky metrics (BCM=0)
-    for metric in ['r2_clear', 'rmse_clear', 'mae_clear']:
+    for metric in ['r2_clear', 'rmse_clear', 'mae_clear', 'bias_clear']:
         if metric in results_df.columns:
             values = results_df[metric].dropna()
             if len(values) > 0:
                 print(f"{metric} (BCM=0)"[:25].ljust(25) + f" {values.mean():>10.4f} {values.std():>10.4f} {values.min():>10.4f} {values.max():>10.4f}")
     
     # Cloudy-sky metrics (BCM=1)
-    for metric in ['r2_cloudy', 'rmse_cloudy', 'mae_cloudy']:
+    for metric in ['r2_cloudy', 'rmse_cloudy', 'mae_cloudy', 'bias_cloudy']:
         if metric in results_df.columns:
             values = results_df[metric].dropna()
             if len(values) > 0:
@@ -140,11 +140,12 @@ def main():
     
     # Setup - Create nested directory structure for model type
     model_output_dir = os.path.join(settings.OUTPUT_DIR, 'xgb', args.model_type)
+    temp_pred_dir = os.path.join(model_output_dir, 'loso_temp_predictions')
     os.makedirs(model_output_dir, exist_ok=True)
-    os.makedirs(settings.TEMP_PRED_DIR, exist_ok=True)
+    os.makedirs(temp_pred_dir, exist_ok=True)
     
     # Print paths
-    print_paths(model_output_dir)
+    print_paths(model_output_dir, temp_pred_dir)
     
     # Print feature breakdown
     print_feature_breakdown(features)
@@ -159,10 +160,10 @@ def main():
     print(f"    - Columns: {df.shape[1]}")
     print(f"    - Memory Usage: {df.memory_usage(deep=True).sum() / 1e6:.2f} MB")
     
-    # --- Scale Data ---
+    # --- Scale Data Globally ---
     print("\n--- Scaling Features ---")
-    df, _ = data_loader.scale_features(df)
-    print(f"✓ Features scaled")
+    df, global_scaler = data_loader.scale_features(df)
+    print(f"✓ Features scaled globally")
 
     # --- Hyperparameter Tuning ---
     best_params = settings.DEFAULT_XGB_PARAMS.copy()
@@ -206,8 +207,11 @@ def main():
         fold_start_time = time.time()
         print(f"\n[{i+1}/{len(stations)}] Hold-out Station: {station}")
         
-        # Checkpoint check
-        pred_file = os.path.join(settings.TEMP_PRED_DIR, f"pred_{station}.csv")
+        # Checkpoint check - skip if predictions already exist
+        pred_file = os.path.join(temp_pred_dir, f"preds_{station}.csv")
+        if os.path.exists(pred_file):
+            print(f"  → Skipping (predictions already exist)")
+            continue
             
         train_df, test_df = data_loader.get_station_split(df, station)
         
@@ -237,7 +241,7 @@ def main():
         all_results.append(metrics)
         
         # Print BCM-stratified results
-        print(f"    - Overall:         R²={metrics['r2_overall']:.4f}, RMSE={metrics['rmse_overall']:.4f} K, MAE={metrics['mae_overall']:.4f} K")
+        print(f"    - Overall:         R²={metrics['r2_overall']:.4f}, RMSE={metrics['rmse_overall']:.4f} K, Bias={metrics['bias_overall']:.4f} K")
         
         if 'r2_clear' in metrics and not np.isnan(metrics['r2_clear']):
             print(f"    - Clear-sky (BCM=0, n={n_clear:,}):  R²={metrics['r2_clear']:.4f}, RMSE={metrics['rmse_clear']:.4f} K")
@@ -249,27 +253,47 @@ def main():
         else:
             print(f"    - Cloudy-sky (BCM=1, n={n_cloudy:,}): (no data)")
         
-        # Save Predictions
+        # Save Predictions with consistent column names
         output_df = pd.DataFrame({
+            'LST_true': y_test_flat,
+            'LST_pred': preds,
             'station_id': station,
-            'true': y_test_flat,
-            'pred': preds,
-            'sky_condition': cloud_mask,
-            'local_time': test_df['LOCAL_TIME'].values if 'LOCAL_TIME' in test_df else None
+            'LOCAL_TIME': test_df['LOCAL_TIME'].values if 'LOCAL_TIME' in test_df else None,
+            'ACMC_BCM': cloud_mask
         })
         output_df.to_csv(pred_file, index=False)
         
         # Save Model
-        joblib.dump(model, os.path.join(model_output_dir, f"model_{station}.joblib"))
+        model_path = os.path.join(model_output_dir, f"{args.model_type}_model_{station}.joblib")
+        joblib.dump(model, model_path)
+        
+        # Save Scaler (global scaler, saved per fold for reproducibility/reference)
+        scaler_path = os.path.join(model_output_dir, f"{args.model_type}_scaler_{station}.joblib")
+        joblib.dump(global_scaler, scaler_path)
         
         fold_time = time.time() - fold_start_time
         print(f"    - Fold completed in {fold_time:.2f} seconds")
+
+    # --- Aggregate All Predictions ---
+    print("\n--- Aggregating All Predictions ---")
+    all_preds_list = []
+    for station in stations:
+        pred_path = os.path.join(temp_pred_dir, f"preds_{station}.csv")
+        if os.path.exists(pred_path):
+            all_preds_list.append(pd.read_csv(pred_path))
+    
+    if all_preds_list:
+        all_preds_df = pd.concat(all_preds_list, ignore_index=True)
+        all_preds_path = os.path.join(model_output_dir, f"{args.model_type}_ALL_predictions.csv")
+        all_preds_df.to_csv(all_preds_path, index=False)
+        print(f"✓ All predictions aggregated to: {all_preds_path}")
+        print(f"    - Total predictions: {len(all_preds_df):,}")
 
     # --- Save Aggregate Results ---
     print("\n--- Saving Results ---")
     if all_results:
         results_df = pd.DataFrame(all_results)
-        results_path = os.path.join(model_output_dir, f"results_{args.model_type}.csv")
+        results_path = os.path.join(model_output_dir, f"{args.model_type}_loso_results.csv")
         results_df.to_csv(results_path, index=False)
         print(f"✓ Per-station results saved to: {results_path}")
 

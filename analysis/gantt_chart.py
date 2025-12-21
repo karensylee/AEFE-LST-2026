@@ -1,16 +1,17 @@
 """
 Gantt Chart Analysis of Data Availability
 Generates a layered Gantt chart showing data availability and gaps for all stations in 2024.
-Reflects logic from 02a_ganttchart.py but adapted for Pandas and project structure.
+Reflects logic from 02a_ganttchart.py but adapted for Polars and project structure.
 """
 
-import pandas as pd
+import polars as pl
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import os
 import sys
 import argparse
 import time
+import numpy as np
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,29 +27,40 @@ def load_data():
         print(f"Error: Data file not found at {settings.DATA_PATH}")
         sys.exit(1)
         
-    df = pd.read_csv(settings.DATA_PATH)
+    df = pl.read_csv(settings.DATA_PATH)
     
-    # Metadata path (using hclimatedivision file as confirmed)
+    # Metadata path
     meta_path = os.path.join(settings.BASE_DIR, 'datasets/stations/stations_aef_hiclimatedivision.csv')
     
     if os.path.exists(meta_path):
         print(f"Loading metadata from {meta_path}...")
-        meta_df = pd.read_csv(meta_path)
+        meta_df = pl.read_csv(meta_path)
         
-        # Ensure ID columns are strings for merging
-        df['SITE_ID'] = df['SITE_ID'].astype(str)
-        meta_df['station_id'] = meta_df['station_id'].astype(str)
+        # Ensure ID columns are strings for joining
+        df = df.with_columns(pl.col('SITE_ID').cast(pl.Utf8))
+        meta_df = meta_df.with_columns(pl.col('station_id').cast(pl.Utf8))
         
-        # Merge to get full_name
-        # Keep left (data) to ensure we only plot what we have
-        merged = pd.merge(df, meta_df[['station_id', 'full_name']], left_on='SITE_ID', right_on='station_id', how='left')
+        # Join to get full_name
+        # Keep left (data)
+        merged = df.join(
+            meta_df.select(['station_id', 'full_name']), 
+            left_on='SITE_ID', 
+            right_on='station_id', 
+            how='left'
+        )
         
         # Create display name: full_name if avail, else SITE_ID
-        merged['display_name'] = merged['full_name'].fillna(merged['SITE_ID']).astype(str)
-        merged['display_name'] = merged['display_name'].str.replace(r"[()]", "", regex=True)
+        merged = merged.with_columns(
+            pl.coalesce([pl.col('full_name'), pl.col('SITE_ID')]).alias('display_name')
+        )
+        merged = merged.with_columns(
+            pl.col('display_name').str.replace_all(r"[()]", "")
+        )
     else:
         print(f"Warning: Metadata file not found at {meta_path}. Using SITE_ID as display name.")
-        df['display_name'] = df['SITE_ID'].astype(str)
+        df = df.with_columns(
+            pl.col('SITE_ID').cast(pl.Utf8).alias('display_name')
+        )
         merged = df
 
     return merged
@@ -66,59 +78,84 @@ def get_availability_intervals(df, gap_threshold_mins=10):
     elif 'timestamp' in df.columns:
         time_col = 'timestamp'
     else:
-        # Fallback to sample_time (UTC) if LOCAL_TIME not present, but usually we prefer LOCAL_TIME
         time_col = 'sample_time'
     
     print(f"Using time column: {time_col}")
-    df[time_col] = pd.to_datetime(df[time_col])
     
-    # Sort
-    df = df.sort_values(by=['display_name', time_col])
+    # Convert to datetime if not already
+    # Note: strptime checks might be needed depending on format, but usually automatic or from clean CSV
+    df = df.with_columns(pl.col(time_col).str.to_datetime().alias(time_col))
     
-    intervals = []
+    # Sort by display_name then time
+    df = df.sort(['display_name', time_col])
     
-    # Process each station
-    for station, group in df.groupby('display_name'):
-        # Calculate time diffs
-        # We look for gaps larger than threshold
-        times = group[time_col].values
-        
-        if len(times) == 0:
-            continue
-            
-        # Identify breaks (indices where diff > threshold)
-        diffs = np.diff(times).astype('timedelta64[m]').astype(int)
-        break_indices = np.where(diffs > gap_threshold_mins)[0]
-        
-        # Start indices of blocks are 0 and break_indices + 1
-        starts = np.concatenate(([0], break_indices + 1))
-        # End indices are break_indices and the last index
-        ends = np.concatenate((break_indices, [len(times) - 1]))
-        
-        for s, e in zip(starts, ends):
-            intervals.append({
-                'display_name': station,
-                'station_id': group.iloc[0]['SITE_ID'], # Keep ID
-                'start': times[s],
-                'finish': times[e]
-            })
-            
-    return pd.DataFrame(intervals)
-
-import numpy as np # Needed for diff above
+    # Calculate time difference in minutes
+    # We want to find where (time - prev_time) > threshold
+    
+    # Window function over each station
+    # Calculate diff in minutes
+    df = df.with_columns([
+        (pl.col(time_col).diff().dt.total_minutes().fill_null(0)).over('display_name').alias('diff_mins')
+    ])
+    
+    # Identify starts of new blocks
+    # A new block starts if diff_mins > threshold OR if it's the first row for the station
+    # First row per group will have null diff from diff(), but we filled with 0. 
+    # Actually, diff() result is null for the first element. fill_null(0) makes it 0.
+    # But wait, the first element of a group shouldn't be a gap unless we treat it so.
+    # Let's say:
+    # is_start = (diff_mins > threshold) | (row_number == 0 in group)
+    # We can use group identifiers (run-length encoding style)
+    
+    # Alternative:
+    # 1. Flag gaps: diff > threshold
+    # 2. Cumulative sum of flags gives us a "block_id"
+    # 3. Group by station and block_id, then get min(time) and max(time)
+    
+    gap_threshold = gap_threshold_mins
+    
+    # We need to handle the first row of each group correctly.
+    # diff() gives null for first.
+    # fill_null(gap_threshold + 1) makes the first row start a new block? No, first row is always start of a block.
+    
+    df = df.with_columns([
+        (pl.col('diff_mins').fill_null(gap_threshold + 1) > gap_threshold).alias('is_new_block')
+    ])
+    
+    # Create block identifier
+    df = df.with_columns([
+        pl.col('is_new_block').cum_sum().over('display_name').alias('block_id')
+    ])
+    
+    # Group by station and block_id to find start/end
+    intervals = df.group_by(['display_name', 'SITE_ID', 'block_id']).agg([
+        pl.col(time_col).min().alias('start'),
+        pl.col(time_col).max().alias('finish'),
+        pl.col('SITE_ID').first().alias('station_id') # Redundant but kept for structure
+    ])
+    
+    # Filter out single points if strictly needed, but interval (t, t) is width 0 and won't show on broken_barh anyway unless we add width.
+    # Usually we want valid intervals. Width 0 might be invisible.
+    
+    return intervals
 
 def plot_layered_gantt(avail_df, year=2024, output_path="station_availability.png"):
     print(f"Generating Gantt chart for year {year}...")
     
-    # Sort stations by ID (numeric) if possible, or name
-    # ID is better for consistency
+    # Check if empty
+    if avail_df.height == 0:
+        print("No availability data found.")
+        return
+
+    # Sort stations
+    # If station_id is numeric string, cast to int for sorting
     try:
-        avail_df['station_id_num'] = avail_df['station_id'].astype(int)
-        unique_stations = avail_df[['display_name', 'station_id_num']].drop_duplicates().sort_values('station_id_num')
+        avail_df = avail_df.with_columns(pl.col('station_id').cast(pl.Int32).alias('station_id_num'))
+        unique_stations = avail_df.select(['display_name', 'station_id_num']).unique().sort('station_id_num')
     except:
-        unique_stations = avail_df[['display_name']].drop_duplicates().sort_values('display_name')
+        unique_stations = avail_df.select(['display_name']).unique().sort('display_name')
         
-    stations_display = unique_stations['display_name'].tolist()
+    stations_display = unique_stations['display_name'].to_list()
     
     # Map name to y-axis index
     y_map = {name: i for i, name in enumerate(stations_display)}
@@ -137,16 +174,36 @@ def plot_layered_gantt(avail_df, year=2024, output_path="station_availability.pn
         ax.barh(i, full_duration, left=year_start, height=0.7, color='tab:red', zorder=1)
         
     # 2. Foreground (Blue = Available)
-    # Vectorized plotting is hard with broken bars, so we iterate rows (or use broken_barh)
-    # Using barh per interval
-    # To speed up, we can group by station and use broken_barh
-    
     print("Plotting intervals...")
-    for name, group in avail_df.groupby('display_name'):
+    
+    # Group by display_name to collect intervals
+    # We can iterate through the Polars df or convert to pandas for iterating.
+    # Iterating polars rows is slower than pandas but for plotting this is not the bottleneck.
+    # Let's simple iterate over groups from polars
+    
+    # Convert to pandas for easier iteration with iterrows or groupby if comfortable, 
+    # but let's stick to polars logic -> convert relevant cols to lists
+    
+    # We want list of (start, width) for each station
+    
+    # Calculate widths in the dataframe
+    # Duration in matplotlib dates is days? No, we pass Timestamps.
+    # broken_barh expects xranges as (start_time, duration)
+    # If we pass dates as start, duration must be timedelta.
+    
+    # It might be easier to just loop over the unique stations and filter the dataframe
+    
+    # Pre-calculate widths
+    # We need to make sure 'finish' and 'start' are datetimes
+    
+    # Using pandas for the plotting loop is convenient for matplotlib compatibility (timestamps)
+    # Convert result to pandas for plotting
+    avail_pd = avail_df.to_pandas()
+    
+    for name, group in avail_pd.groupby('display_name'):
         if name not in y_map: continue
         y_idx = y_map[name]
         
-        # Prepare list of (start, width) tuples
         xranges = []
         for _, row in group.iterrows():
             start = row['start']
@@ -199,3 +256,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+import pandas as pd # Needed for timestamps in plotting
+

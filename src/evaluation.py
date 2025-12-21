@@ -21,7 +21,7 @@ def mean_relative_error(y_true, y_pred):
 
 def calculate_metrics(y_true, y_pred, cloud_mask=None):
     """
-    Calculates R2, RMSE, MAE, and MRE for Overall, Clear, and Cloudy conditions.
+    Calculates R2, RMSE, MAE, MRE, and Bias for Overall, Clear, and Cloudy conditions.
     
     Args:
         y_true (np.array): True values.
@@ -37,7 +37,8 @@ def calculate_metrics(y_true, y_pred, cloud_mask=None):
         'r2_overall': r2_score(y_true, y_pred),
         'rmse_overall': np.sqrt(mean_squared_error(y_true, y_pred)),
         'mae_overall': mean_absolute_error(y_true, y_pred),
-        'mre_overall': mean_relative_error(y_true, y_pred)
+        'mre_overall': mean_relative_error(y_true, y_pred),
+        'bias_overall': np.mean(y_pred - y_true)
     }
     
     if cloud_mask is not None:
@@ -51,11 +52,13 @@ def calculate_metrics(y_true, y_pred, cloud_mask=None):
             metrics['rmse_clear'] = np.sqrt(mean_squared_error(y_true[clear_mask], y_pred[clear_mask]))
             metrics['mae_clear'] = mean_absolute_error(y_true[clear_mask], y_pred[clear_mask])
             metrics['mre_clear'] = mean_relative_error(y_true[clear_mask], y_pred[clear_mask])
+            metrics['bias_clear'] = np.mean(y_pred[clear_mask] - y_true[clear_mask])
         else:
             metrics['r2_clear'] = np.nan
             metrics['rmse_clear'] = np.nan
             metrics['mae_clear'] = np.nan
             metrics['mre_clear'] = np.nan
+            metrics['bias_clear'] = np.nan
             
         # Cloudy Sky
         if np.sum(cloudy_mask) > 0:
@@ -63,10 +66,12 @@ def calculate_metrics(y_true, y_pred, cloud_mask=None):
             metrics['rmse_cloudy'] = np.sqrt(mean_squared_error(y_true[cloudy_mask], y_pred[cloudy_mask]))
             metrics['mae_cloudy'] = mean_absolute_error(y_true[cloudy_mask], y_pred[cloudy_mask])
             metrics['mre_cloudy'] = mean_relative_error(y_true[cloudy_mask], y_pred[cloudy_mask])
+            metrics['bias_cloudy'] = np.mean(y_pred[cloudy_mask] - y_true[cloudy_mask])
         else:
             metrics['r2_cloudy'] = np.nan
             metrics['rmse_cloudy'] = np.nan
             metrics['mae_cloudy'] = np.nan
             metrics['mre_cloudy'] = np.nan
+            metrics['bias_cloudy'] = np.nan
             
     return metrics
