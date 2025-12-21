@@ -168,14 +168,29 @@ def main():
     # --- Hyperparameter Tuning (Mandatory) ---
     print("\n--- Starting Hyperparameter Tuning with Optuna ---")
     stations = df['SITE_ID'].unique()
+    np.random.seed(settings.RANDOM_STATE)  # Reproducible split
     np.random.shuffle(stations)
     n_train = int(len(stations) * 0.8)
-    train_stations = stations[:n_train]
-    val_stations = stations[n_train:]
+    train_stations = sorted(stations[:n_train].tolist())
+    val_stations = sorted(stations[n_train:].tolist())
     
-    print(f"\nStation Split for Tuning:")
-    print(f"    - Training Stations: {len(train_stations)}")
-    print(f"    - Validation Stations: {len(val_stations)}")
+    print(f"\nStation Split for Tuning (seed={settings.RANDOM_STATE}):")
+    print(f"    - Training Stations ({len(train_stations)}): {train_stations}")
+    print(f"    - Validation Stations ({len(val_stations)}): {val_stations}")
+    
+    # Save station split to JSON for reference
+    import json
+    split_info = {
+        'random_seed': settings.RANDOM_STATE,
+        'train_stations': train_stations,
+        'val_stations': val_stations,
+        'train_count': len(train_stations),
+        'val_count': len(val_stations)
+    }
+    split_path = os.path.join(model_output_dir, f"{args.model_type}_optuna_station_split.json")
+    with open(split_path, 'w') as f:
+        json.dump(split_info, f, indent=2)
+    print(f"    - Split saved to: {split_path}")
     
     tuning_df = df[df['SITE_ID'].isin(train_stations)]
     
