@@ -43,7 +43,7 @@ def process_data(target_year=2024, tolerance_minutes=5):
     BASE_DIR = settings.BASE_DIR
     GROUND_DATA_PATH = os.path.join(BASE_DIR, 'datasets/raw/Tsrf_1_Avg')
     GOES_DATA_PATH = os.path.join(BASE_DIR, 'datasets/raw/goes18acmc/goes18_lst_samples_2024_ACMC.csv')
-    EMBEDDINGS_PATH = os.path.join(BASE_DIR, 'datasets/raw/aef/hawaii_station_alphaearth_embeddings_2024.csv')
+    EMBEDDINGS_PATH = os.path.join(BASE_DIR, 'datasets/stations/stations_aef_hiclimatedivision.csv')
     FINAL_OUTPUT_PATH = settings.DATA_PATH
     
     # Setup logging
@@ -192,10 +192,31 @@ def process_data(target_year=2024, tolerance_minutes=5):
     rows_before_dqf = len(final_df)
     logger.info(f"\nRow count before DQF filter: {rows_before_dqf}")
     
-    # Filter ACMC_DQF
+    # Filter ACMC_DQF (cloud mask quality)
     final_df = final_df[final_df['ACMC_DQF'] == 0]
-    rows_after_dqf = len(final_df)
-    logger.info(f"Row count after DQF filter (ACMC_DQF == 0): {rows_after_dqf}")
+    rows_after_acmc_dqf = len(final_df)
+    logger.info(f"Row count after ACMC_DQF filter: {rows_after_acmc_dqf}")
+    
+    # Drop any rows with NaN values in any column
+    rows_before_dropna = len(final_df)
+    final_df = final_df.dropna()
+    rows_after_dropna = len(final_df)
+    logger.info(f"Row count after dropna (all columns): {rows_after_dropna} (removed {rows_before_dropna - rows_after_dropna} rows)")
+    
+    # Filter per-CMI-band DQF flags (ensure all bands have good quality)
+    logger.info("Filtering per-CMI-band DQF flags...")
+    dqf_cols = [f'DQF_C{i:02d}' for i in range(1, 17)]
+    existing_dqf_cols = [c for c in dqf_cols if c in final_df.columns]
+    
+    if existing_dqf_cols:
+        # Create a combined mask: all DQF columns must be 0
+        dqf_mask = (final_df[existing_dqf_cols] == 0).all(axis=1)
+        final_df = final_df[dqf_mask]
+        rows_after_dqf = len(final_df)
+        logger.info(f"Row count after CMI DQF filter (all {len(existing_dqf_cols)} bands): {rows_after_dqf}")
+    else:
+        rows_after_dqf = len(final_df)
+        logger.info("No CMI DQF columns found, skipping per-band filter.")
     
     # Convert LST from Celsius to Kelvin
     logger.info("Converting LST from Celsius to Kelvin...")
@@ -264,9 +285,9 @@ def process_data(target_year=2024, tolerance_minutes=5):
     emb_df = pd.read_csv(EMBEDDINGS_PATH)
     emb_df.rename(columns={'station_id': 'SITE_ID'}, inplace=True)
     
-    # Ensure ID types match
-    final_df['SITE_ID'] = final_df['SITE_ID'].astype(str)
-    emb_df['SITE_ID'] = emb_df['SITE_ID'].astype(str)
+    # Ensure ID types match (pad with zeros to 4 digits)
+    final_df['SITE_ID'] = final_df['SITE_ID'].astype(str).str.zfill(4)
+    emb_df['SITE_ID'] = emb_df['SITE_ID'].astype(str).str.zfill(4)
     
     cols_to_merge = ['SITE_ID'] + [f'A{i:02d}' for i in range(64)] + ['elevation']
     available_emb_cols = [c for c in cols_to_merge if c in emb_df.columns]
@@ -285,7 +306,7 @@ def process_data(target_year=2024, tolerance_minutes=5):
         logger.info(f"Loading climate divisions from {CLIMATE_PATH}")
         cd_df = pd.read_csv(CLIMATE_PATH)
         cd_df.rename(columns={'station_id': 'SITE_ID'}, inplace=True)
-        cd_df['SITE_ID'] = cd_df['SITE_ID'].astype(str)
+        cd_df['SITE_ID'] = cd_df['SITE_ID'].astype(str).str.zfill(4)
         
         cols_to_use = ['SITE_ID'] + [c for c in settings.CLIMATE_DIVISIONS if c in cd_df.columns]
         
@@ -299,6 +320,21 @@ def process_data(target_year=2024, tolerance_minutes=5):
         
     # --- 5. Save ---
     logger.info("\n--- Step 5: Saving ---")
+    
+    # Drop any rows with NaN values in essential columns only
+    # (Climate divisions are optional and may have NaN for some stations)
+    essential_cols = (
+        settings.CMI_BANDS + 
+        settings.EMBEDDINGS + 
+        settings.AUXILIARY_FEATURES + 
+        [settings.TARGET_COL, 'SITE_ID', 'LOCAL_TIME', 'ACMC_BCM']
+    )
+    essential_cols = [c for c in essential_cols if c in merged_final.columns]
+    
+    rows_before_dropna = len(merged_final)
+    merged_final = merged_final.dropna(subset=essential_cols)
+    rows_after_dropna = len(merged_final)
+    logger.info(f"Row count after dropna (essential columns): {rows_after_dropna} (removed {rows_before_dropna - rows_after_dropna} rows)")
     
     os.makedirs(os.path.dirname(FINAL_OUTPUT_PATH), exist_ok=True)
     merged_final.to_csv(FINAL_OUTPUT_PATH, index=False)

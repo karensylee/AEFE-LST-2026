@@ -93,8 +93,13 @@ Merges ground + satellite data, performs feature engineering:
 
 ```bash
 python main.py --model_type BLM
-python main.py --model_type BLAM --tune
+python main.py --model_type BLAM
+python main.py --model_type BLAM-C
+python main.py --model_type CIM
+python main.py --model_type CIAM
 ```
+
+Optuna hyperparameter tuning (100 trials) runs automatically for each model.
 
 **Available model types** (defined in `config/settings.py`):
 

@@ -127,7 +127,6 @@ def print_final_summary(all_results, model_type, total_time):
 def main():
     parser = argparse.ArgumentParser(description="Train LST XGBoost Models")
     parser.add_argument('--model_type', type=str, required=True, choices=settings.FEATURE_SETS.keys(), help="Feature set to use")
-    parser.add_argument('--tune', action='store_true', help="Run hyperparameter tuning, otherwise use defaults")
     args = parser.parse_args()
 
     total_start_time = time.time()
@@ -165,36 +164,29 @@ def main():
     df, global_scaler = data_loader.scale_features(df)
     print(f"✓ Features scaled globally")
 
-    # --- Hyperparameter Tuning ---
-    best_params = settings.DEFAULT_XGB_PARAMS.copy()
+    # --- Hyperparameter Tuning (Mandatory) ---
+    print("\n--- Starting Hyperparameter Tuning with Optuna ---")
+    stations = df['SITE_ID'].unique()
+    np.random.shuffle(stations)
+    n_train = int(len(stations) * 0.8)
+    train_stations = stations[:n_train]
+    val_stations = stations[n_train:]
     
-    if args.tune:
-        print("\n--- Starting Hyperparameter Tuning with Optuna ---")
-        stations = df['SITE_ID'].unique()
-        np.random.shuffle(stations)
-        n_train = int(len(stations) * 0.8)
-        train_stations = stations[:n_train]
-        val_stations = stations[n_train:]
-        
-        print(f"\nStation Split for Tuning:")
-        print(f"    - Training Stations: {len(train_stations)}")
-        print(f"    - Validation Stations: {len(val_stations)}")
-        
-        tuning_df = df[df['SITE_ID'].isin(train_stations)]
-        
-        X_tune = tuning_df[features].to_numpy()
-        y_tune = tuning_df[settings.TARGET_COL].to_numpy()
-        
-        best_params = trainer.tune_hyperparameters(X_tune, y_tune)
-        
-        print(f"\n✓ Optuna Tuning Complete")
-        print(f"    - Best Parameters:")
-        for key, value in best_params.items():
-            print(f"        {key}: {value}")
-    else:
-        print("\n--- Using Default Hyperparameters ---")
-        for key, value in best_params.items():
-            print(f"    {key}: {value}")
+    print(f"\nStation Split for Tuning:")
+    print(f"    - Training Stations: {len(train_stations)}")
+    print(f"    - Validation Stations: {len(val_stations)}")
+    
+    tuning_df = df[df['SITE_ID'].isin(train_stations)]
+    
+    X_tune = tuning_df[features].to_numpy()
+    y_tune = tuning_df[settings.TARGET_COL].to_numpy()
+    
+    best_params = trainer.tune_hyperparameters(X_tune, y_tune)
+    
+    print(f"\n✓ Optuna Tuning Complete")
+    print(f"    - Best Parameters:")
+    for key, value in best_params.items():
+        print(f"        {key}: {value}")
 
     # --- LOSO Loop ---
     print("\n--- Starting Leave-One-Station-Out (LOSO) Cross-Validation ---")

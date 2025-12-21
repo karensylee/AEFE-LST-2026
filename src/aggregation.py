@@ -4,7 +4,7 @@ Temporal Aggregation Module for 5-minute GOES-18 and Ground Station Data.
 This module provides quality-controlled aggregation functions for converting
 high-frequency (5-minute) observations to hourly, daily, and monthly means.
 QC thresholds follow the methodology from Lucas et al. (2020).
-
+Lucas, M. P., Trauernicht, C., Frazier, A. G., & Miura, T. (2020). Long-term, gridded standardized precipitation index for Hawai ‘i. Data, 5(4), 109.
 QC Thresholds:
 - Hourly: ≥10 of 12 possible 5-min observations
 - Daily: ≥22 of 24 possible hourly observations  
@@ -23,7 +23,7 @@ DEFAULT_MIN_HOURLY_OBS_PER_DAY = 22
 
 def _get_aggregation_rules(
     df: pd.DataFrame,
-    time_varying_prefixes: Tuple[str, ...] = ('CMI_', 'LWOUT', 'LST', 'HOUR_', 'DOY_', 'SZA_', 'SAA_'),
+    time_varying_prefixes: Tuple[str, ...] = ('CMI_', 'LST', 'HOUR_', 'DOY_', 'SZA_', 'SAA_'),
     static_prefixes: Tuple[str, ...] = ('Elevation', 'A')
 ) -> Dict[str, str]:
     """
@@ -52,7 +52,7 @@ def aggregate_hourly(
     df: pd.DataFrame,
     time_col: str = 'LOCAL_TIME',
     site_col: str = 'SITE_ID',
-    qc_col: str = 'LWOUT',
+    qc_col: str = 'LST',
     min_obs: int = DEFAULT_MIN_5MIN_OBS_PER_HOUR,
     timezone: str = 'Pacific/Honolulu'
 ) -> pd.DataFrame:
