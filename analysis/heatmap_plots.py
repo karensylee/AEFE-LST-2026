@@ -40,18 +40,18 @@ DIVISION_NAMES = {
 
 # Column mappings for heatmap display labels
 COLUMN_LABELS = {
-    'mean_residual_diff_emb_vs_base_all': 'Mean Resid.\nBLAM vs BLM (All-Sky)',
-    'mean_residual_diff_emb_vs_base_clear': 'Mean Resid.\nBLAM vs BLM (Clear)',
-    'mean_residual_diff_emb_vs_base_cloudy': 'Mean Resid.\nBLAM vs BLM (Cloudy)',
-    'median_residual_diff_emb_vs_base_all': 'Median Resid.\nBLAM vs BLM (All-Sky)',
-    'median_residual_diff_emb_vs_base_clear': 'Median Resid.\nBLAM vs BLM (Clear)',
-    'median_residual_diff_emb_vs_base_cloudy': 'Median Resid.\nBLAM vs BLM (Cloudy)',
+    'mean_residual_diff_emb_vs_base_all': '|Mean Resid.|\nBLAM vs BLM (All-Sky)',
+    'mean_residual_diff_emb_vs_base_clear': '|Mean Resid.|\nBLAM vs BLM (Clear-Sky)',
+    'mean_residual_diff_emb_vs_base_cloudy': '|Mean Resid.|\nBLAM vs BLM (Cloudy-Sky)',
+    'median_residual_diff_emb_vs_base_all': '|Median Resid.|\nBLAM vs BLM (All-Sky)',
+    'median_residual_diff_emb_vs_base_clear': '|Median Resid.|\nBLAM vs BLM (Clear-Sky)',
+    'median_residual_diff_emb_vs_base_cloudy': '|Median Resid.|\nBLAM vs BLM (Cloudy-Sky)',
     'rmse_diff_emb_vs_base_all': 'RMSE\nBLAM vs BLM (All-Sky)',
-    'rmse_diff_emb_vs_base_clear': 'RMSE\nBLAM vs BLM (Clear)',
-    'rmse_diff_emb_vs_base_cloudy': 'RMSE\nBLAM vs BLM (Cloudy)',
+    'rmse_diff_emb_vs_base_clear': 'RMSE\nBLAM vs BLM (Clear-Sky)',
+    'rmse_diff_emb_vs_base_cloudy': 'RMSE\nBLAM vs BLM (Cloudy-Sky)',
     'std_dev_diff_diff_emb_vs_base_all': 'STD\nBLAM vs BLM (All-Sky)',
-    'std_dev_diff_diff_emb_vs_base_clear': 'STD\nBLAM vs BLM (Clear)',
-    'std_dev_diff_diff_emb_vs_base_cloudy': 'STD\nBLAM vs BLM (Cloudy)',
+    'std_dev_diff_diff_emb_vs_base_clear': 'STD\nBLAM vs BLM (Clear-Sky)',
+    'std_dev_diff_diff_emb_vs_base_cloudy': 'STD\nBLAM vs BLM (Cloudy-Sky)',
 }
 
 
@@ -124,6 +124,11 @@ def calculate_station_metrics(preds_df, stations_df):
     if 'LST_pred' in cols: preds_df = preds_df.rename({'LST_pred': 'pred'})
     if 'ACMC_BCM' in cols: preds_df = preds_df.rename({'ACMC_BCM': 'sky_condition'})
     
+    # Ensure station_id is string type for joining
+    preds_df = preds_df.with_columns(
+        pl.col('station_id').cast(pl.Utf8).str.zfill(4)
+    )
+    
     # Calculate Residuals
     preds_df = preds_df.with_columns([
         (pl.col('pred') - pl.col('true')).alias('residual')
@@ -150,10 +155,15 @@ def calculate_station_metrics(preds_df, stations_df):
         ])
         metrics_list.append(agg)
         
-    # Join all
+    # Join all metrics using full join with coalesce to avoid duplicate station_id columns
     metrics_df = metrics_list[0]
     for m in metrics_list[1:]:
-        metrics_df = metrics_df.join(m, on='station_id', how='outer')
+        metrics_df = metrics_df.join(m, on='station_id', how='full')
+        # Coalesce station_id with station_id_right and drop the right column
+        if 'station_id_right' in metrics_df.columns:
+            metrics_df = metrics_df.with_columns(
+                pl.coalesce(['station_id', 'station_id_right']).alias('station_id')
+            ).drop('station_id_right')
         
     # Join metadata
     metrics_df = metrics_df.join(stations_df, on='station_id', how='left')
@@ -163,55 +173,52 @@ def calculate_station_metrics(preds_df, stations_df):
 
 def calculate_difference_metrics(blm_metrics, blam_metrics):
     """
-    Calculate the difference between BLAM and BLM metrics.
-    Negative values = BLAM is better (smaller error).
+    Calculate the difference between comparison and baseline metrics.
+    Negative values = comparison model is better.
+    
+    For RMSE/STD: Simple subtraction (lower is better)
+    For Bias (mean/median residual): Compare absolute magnitudes (closer to zero is better)
     
     Args:
-        blm_metrics: DataFrame with BLM per-station metrics
-        blam_metrics: DataFrame with BLAM per-station metrics
+        blm_metrics: DataFrame with baseline per-station metrics
+        blam_metrics: DataFrame with comparison per-station metrics
         
     Returns:
         DataFrame with difference metrics
     """
-    # Join on station_id
-    # We need to preserve metadata from one of them (they should be same)
-    
-    # Prefix columns to avoid collision if necessary, but we are subtracting specific cols
-    
     joined = blm_metrics.join(blam_metrics, on='station_id', suffix='_blam')
     
-    # Original naming: blm_metrics has 'mean_residual_all', blam has 'mean_residual_all_blam' (if suffix applied)
-    # Actually join adds suffix to right table cols if collision
-    # blm cols: 'mean_residual_all', etc.
-    # blam cols: 'mean_residual_all_blam'
+    # Define metrics that are always positive (RMSE, STD)
+    error_metrics = ['rmse', 'std_dev_diff']
+    # Define metrics that can be negative (Bias)
+    bias_metrics = ['mean_residual', 'median_residual']
     
-    metrics_to_diff = ['mean_residual', 'median_residual', 'rmse', 'std_dev_diff']
     conditions = ['all', 'clear', 'cloudy']
-    
     diff_exprs = []
     
-    for metric in metrics_to_diff:
+    # For RMSE/STD: Simple subtraction (Lower is better)
+    for metric in error_metrics:
         for condition in conditions:
-            col_base = f'{metric}_{condition}'
-            col_comp = f'{metric}_{condition}_blam'
-            col_diff = f'{metric}_diff_emb_vs_base_{condition}'
-            
+            col_base, col_comp = f'{metric}_{condition}', f'{metric}_{condition}_blam'
             diff_exprs.append(
-                (pl.col(col_comp) - pl.col(col_base)).alias(col_diff)
+                (pl.col(col_comp) - pl.col(col_base)).alias(f'{metric}_diff_emb_vs_base_{condition}')
             )
             
-    # Keep metadata
+    # For Bias: Compare Absolute Magnitudes (Closer to zero is better)
+    for metric in bias_metrics:
+        for condition in conditions:
+            col_base, col_comp = f'{metric}_{condition}', f'{metric}_{condition}_blam'
+            # (Abs(BLAM) - Abs(BLM)) -> Negative means BLAM is closer to zero
+            diff_exprs.append(
+                (pl.col(col_comp).abs() - pl.col(col_base).abs()).alias(f'{metric}_diff_emb_vs_base_{condition}')
+            )
+            
     meta_cols = ['elevation', 'Id', 'HICLIMATEDIVISION']
-    # If they collided, they might be renamed. Elevation is in both. 
-    # 'elevation' (left), 'elevation_blam' (right).
-    
-    diff_df = joined.select(
+    return joined.select(
         [pl.col('station_id')] + 
-        [pl.col(c) for c in meta_cols if c in joined.columns] +
+        [pl.col(c) for c in meta_cols if c in joined.columns] + 
         diff_exprs
     )
-    
-    return diff_df
 
 
 def sort_dataframe(df, order_by='station_id', ascending=True):
@@ -237,7 +244,7 @@ def sort_dataframe(df, order_by='station_id', ascending=True):
 
 
 def generate_heatmap(diff_df, order_by='station_id', ascending=True, 
-                     output_dir=None, show_plot=True):
+                     output_dir=None, show_plot=True, baseline='BLM', compare='BLAM'):
     """
     Generate and save the comparative heatmap.
     
@@ -247,6 +254,8 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
         ascending: Sort order
         output_dir: Directory to save the figure
         show_plot: Whether to display the plot
+        baseline: Baseline model name (e.g., 'BLM', 'CIM')
+        compare: Comparison model name (e.g., 'BLAM', 'CIAM')
     """
     print(f"\n--- Generating Heatmap (ordered by {order_by}, {'ascending' if ascending else 'descending'}) ---")
     
@@ -259,19 +268,23 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
     # Set index for heatmap labeling
     sorted_pd.set_index('station_id', inplace=True)
     
-    # Create plot labels based on ordering
+    # Create plot labels based on ordering (last 3 digits, no leading zeros)
+    def format_station_label(station_id):
+        """Format station ID to show last 3 digits without leading zero."""
+        return str(int(str(station_id)[-3:]))
+    
     if order_by == 'division':
         plot_labels = [
-            f"{idx} ({DIVISION_NAMES.get(row.Id, 'Unknown')})" 
+            f"{format_station_label(idx)} ({DIVISION_NAMES.get(row.Id, 'Unknown')})" 
             for idx, row in sorted_pd.iterrows()
         ]
     elif order_by == 'elevation':
         plot_labels = [
-            f"{idx} ({int(row.elevation)}m)" 
+            f"{format_station_label(idx)} ({int(row.elevation)}m)" 
             for idx, row in sorted_pd.iterrows()
         ]
     else:
-        plot_labels = list(sorted_pd.index)
+        plot_labels = [format_station_label(idx) for idx in sorted_pd.index]
     
     # Prepare heatmap data (exclude metadata columns)
     metadata_cols = ['elevation', 'Id', 'HICLIMATEDIVISION']
@@ -314,11 +327,11 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
     
     # Y-axis formatting
     order_label = {
-        'station_id': 'Station',
-        'elevation': 'Station\n(Elevation)',
-        'division': 'Station\n(Division)'
+        'station_id': 'Station ID',
+        'elevation': 'Station ID\n(Elevation)',
+        'division': 'Station ID\n(Division)'
     }
-    ax.set_ylabel(order_label.get(order_by, 'Station'), fontsize=12)
+    ax.set_ylabel(order_label.get(order_by, 'Station ID'), fontsize=12)
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=9)
     plt.xticks(rotation=90, ha='right', fontsize=9)
     
@@ -335,7 +348,7 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
             ax.axvline(idx, color='black', linestyle=':', linewidth=2)
     
     ax.set_title(
-        "Comparative Model Performance by Station\n(BLAM) - (BLM)\nNegative = BLAM Better",
+        f"Comparative Model Performance by Station\n({compare}) - ({baseline})\nNegative values indicate the addition of AEFE improved performance",
         fontsize=16, pad=20
     )
     ax.set_xlabel('Comparative Residual Metrics (Condition)', fontsize=12)
@@ -344,7 +357,7 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
     # Save figure
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
-        filename = f"station_metrics_heatmap_by_{order_by}.png"
+        filename = f"station_metrics_heatmap_{compare}_vs_{baseline}_by_{order_by}.png"
         filepath = os.path.join(output_dir, filename)
         plt.savefig(filepath, dpi=300, bbox_inches='tight')
         print(f"✓ Heatmap saved to: {filepath}")
@@ -357,7 +370,19 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate comparative heatmaps for BLM vs BLAM model performance"
+        description="Generate comparative heatmaps for model performance"
+    )
+    parser.add_argument(
+        '--baseline', 
+        type=str, 
+        default='BLM',
+        help="Baseline model (default: BLM)"
+    )
+    parser.add_argument(
+        '--compare', 
+        type=str, 
+        default='BLAM',
+        help="Comparison model (default: BLAM)"
     )
     parser.add_argument(
         '--order_by', 
@@ -379,7 +404,7 @@ def main():
     args = parser.parse_args()
     
     print("=" * 80)
-    print("STATION METRICS HEATMAP ANALYSIS")
+    print(f"STATION METRICS HEATMAP ANALYSIS: {args.compare} vs {args.baseline}")
     print("=" * 80)
     
     # Output directory
@@ -393,24 +418,31 @@ def main():
     # Load predictions for both models
     print("\n--- Loading Model Predictions ---")
     
-    # For now, we'll load from temp_predictions
+    # Load baseline predictions
     try:
-        preds_df = load_predictions('BLM')
-        print(f"✓ Loaded predictions for {preds_df['station_id'].n_unique()} stations")
+        baseline_preds = load_predictions(args.baseline)
+        print(f"✓ Loaded {args.baseline} predictions for {baseline_preds['station_id'].n_unique()} stations")
     except Exception as e:
-        print(f"Error loading predictions: {e}")
-        print("Make sure to run training first: python main.py --model_type BLM")
+        print(f"Error loading {args.baseline} predictions: {e}")
+        print(f"Make sure to run training first: python main.py --model_type {args.baseline}")
         return
     
-    # Calculate metrics (placeholder - in real scenario you'd have both BLM and BLAM)
+    # Load comparison predictions
+    try:
+        compare_preds = load_predictions(args.compare)
+        print(f"✓ Loaded {args.compare} predictions for {compare_preds['station_id'].n_unique()} stations")
+    except Exception as e:
+        print(f"Error loading {args.compare} predictions: {e}")
+        print(f"Make sure to run training first: python main.py --model_type {args.compare}")
+        return
+    
+    # Calculate metrics for each model
     print("\n--- Calculating Per-Station Metrics ---")
-    blm_metrics = calculate_station_metrics(preds_df, stations_df)
+    baseline_metrics = calculate_station_metrics(baseline_preds, stations_df)
+    compare_metrics = calculate_station_metrics(compare_preds, stations_df)
     
-    # For demonstration - using same predictions (replace with actual BLAM predictions)
-    blam_metrics = blm_metrics.clone() # Clone in Polars
-    
-    # Calculate differences
-    diff_df = calculate_difference_metrics(blm_metrics, blam_metrics)
+    # Calculate differences (Compare - Baseline)
+    diff_df = calculate_difference_metrics(baseline_metrics, compare_metrics)
     print(f"✓ Calculated difference metrics for {diff_df.height} stations")
     
     # Generate heatmap
@@ -419,7 +451,9 @@ def main():
         order_by=args.order_by,
         ascending=not args.descending,
         output_dir=output_dir,
-        show_plot=not args.no_show
+        show_plot=not args.no_show,
+        baseline=args.baseline,
+        compare=args.compare
     )
     
     print("\n" + "=" * 80)

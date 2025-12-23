@@ -38,7 +38,7 @@ plt.rcParams['font.size'] = 10
 ISLAND_BOUNDS = {
     'kauai': {'name': 'Kauaʻi', 'min_lon': -159.8457, 'max_lon': -159.2388, 'min_lat': 21.8321, 'max_lat': 22.2842, 'lon_mult': 0.2, 'lat_mult': 0.2},
     'oahu': {'name': 'Oʻahu', 'min_lon': -158.3051, 'max_lon': -157.6349, 'min_lat': 21.245298, 'max_lat': 21.7142899, 'lon_mult': 0.2, 'lat_mult': 0.2},
-    'maui_nui': {'name': 'Maui Nui', 'min_lon': -157.3505, 'max_lon': -155.8454, 'min_lat': 20.4649, 'max_lat': 21.2964, 'lon_mult': 0.5, 'lat_mult': 0.2},
+    'maui_nui': {'name': 'Maui Nui', 'min_lon': -157.3505, 'max_lon': -155.8454, 'min_lat': 20.4649, 'max_lat': 21.2964, 'lon_mult': 0.5, 'lat_mult': 0.4},
     'hawaii': {'name': 'Island of Hawaiʻi', 'min_lon': -156.2519, 'max_lon': -154.7578, 'min_lat': 18.8874, 'max_lat': 20.3053, 'lon_mult': 0.5, 'lat_mult': 0.5}
 }
 
@@ -84,10 +84,15 @@ def calculate_station_metrics(df, model_name):
     if not metrics_list:
         return pl.DataFrame()
         
-    # Join all metrics
+    # Join all metrics using full join with coalesce to avoid duplicate station_id columns
     final_df = metrics_list[0]
     for m in metrics_list[1:]:
-        final_df = final_df.join(m, on='station_id', how='outer')
+        final_df = final_df.join(m, on='station_id', how='full')
+        # Coalesce station_id with station_id_right and drop the right column
+        if 'station_id_right' in final_df.columns:
+            final_df = final_df.with_columns(
+                pl.coalesce(['station_id', 'station_id_right']).alias('station_id')
+            ).drop('station_id_right')
         
     return final_df
 
@@ -150,7 +155,7 @@ def format_axes(ax, lon_mult=0.2, lat_mult=0.1):
     ax.set_xlabel('Longitude', fontsize=11)
     ax.set_ylabel('Latitude', fontsize=11)
     ax.tick_params(axis='both', which='major', labelsize=10)
-    ax.yaxis.set_tick_params(rotation=90)
+    ax.yaxis.set_tick_params(rotation=0)  # Horizontal labels to avoid overlap
     ax.set_facecolor('white')
     for spine in ax.spines.values():
         spine.set_edgecolor('lightgray')
@@ -254,10 +259,15 @@ def main():
         print("No metrics could be calculated. Modeling results missing?")
         sys.exit(1)
         
-    # Join metrics
+    # Join metrics with coalesce to handle full join key duplication
     full_metrics_df = metrics_frames[0]
     for m in metrics_frames[1:]:
-        full_metrics_df = full_metrics_df.join(m, on='station_id', how='outer')
+        full_metrics_df = full_metrics_df.join(m, on='station_id', how='full')
+        # Coalesce station_id with station_id_right and drop the right column
+        if 'station_id_right' in full_metrics_df.columns:
+            full_metrics_df = full_metrics_df.with_columns(
+                pl.coalesce(['station_id', 'station_id_right']).alias('station_id')
+            ).drop('station_id_right')
     
     # Calculate Differences (Compare - Baseline)
     # diff = exp - ctrl
@@ -300,8 +310,8 @@ def main():
     
     # Configuration matches template
     metric_display_names = {
-        'mean_residual': 'Mean Residual',
-        'median_residual': 'Median Residual',
+        'mean_residual': '|Mean Residual|',
+        'median_residual': '|Median Residual|',
         'rmse': 'RMSE',
         'std_dev_diff': 'STD Diff'
     }
@@ -328,7 +338,9 @@ def main():
             vmin = -vmax
             norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
             
-            title = f"{m_name} Difference by Station\n({args.compare}) - ({args.baseline}) ({c_key.title()})"
+            # Format condition name for title (Clear-Sky, Cloudy-Sky, All-Sky)
+            cond_display = f"{c_key.title()}-Sky" if c_key != 'all' else "All-Sky"
+            title = f"{m_name} Difference by Station\n({args.compare}) - ({args.baseline}) ({cond_display})"
             filename = f"map_{m_key}_{args.compare}_vs_{args.baseline}_{c_key}.png"
             filepath = os.path.join(output_dir, filename)
 
