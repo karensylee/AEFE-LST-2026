@@ -12,6 +12,7 @@ import sys
 import argparse
 import time
 import numpy as np
+import pandas as pd
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -84,7 +85,19 @@ def get_availability_intervals(df, gap_threshold_mins=10):
     
     # Convert to datetime if not already
     # Note: strptime checks might be needed depending on format, but usually automatic or from clean CSV
-    df = df.with_columns(pl.col(time_col).str.to_datetime().alias(time_col))
+    # Convert to datetime if not already
+    # Note: strptime checks might be needed depending on format, but usually automatic or from clean CSV
+    # Convert to datetime with explicit format to avoid ComputeError
+    # Data format: 2024-05-01 12:40:00+00:00
+    try:
+        df = df.with_columns(
+            pl.col(time_col).str.to_datetime(format="%Y-%m-%d %H:%M:%S%z").alias(time_col)
+        )
+    except Exception:
+        # Fallback for other formats or if already mixed
+        print("Warning: Standard format parsing failed, trying automatic inference...")
+        df = df.with_columns(pl.col(time_col).str.to_datetime(time_zone='UTC', strict=False).alias(time_col))
+
     
     # Sort by display_name then time
     df = df.sort(['display_name', time_col])
@@ -256,5 +269,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-import pandas as pd # Needed for timestamps in plotting
-
