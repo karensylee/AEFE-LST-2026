@@ -16,6 +16,8 @@ import numpy as np
 import polars as pl
 from scipy import stats
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -95,10 +97,94 @@ def perform_tests(data1, data2, metric=None):
     }
 
 
+def paired_dot_plot(ax, data1, data2, labels, title, ylabel):
+    """
+    Create a paired dot plot (slope graph) showing per-station changes.
+    
+    data1, data2: arrays of matched values (same station order)
+    labels: station identifiers
+    """
+    n = len(data1)
+    
+    # Colors: green if improved (data2 < data1), red if worse
+    colors = ['#2ecc71' if d2 < d1 else '#e74c3c' for d1, d2 in zip(data1, data2)]
+    
+    for i in range(n):
+        ax.plot([0, 1], [data1[i], data2[i]], color=colors[i], alpha=0.6, linewidth=1.5)
+        ax.scatter([0], [data1[i]], color='#3498db', s=30, zorder=3)
+        ax.scatter([1], [data2[i]], color='#9b59b6', s=30, zorder=3)
+    
+    # Summary statistics
+    mean1, mean2 = np.mean(data1), np.mean(data2)
+    ax.scatter([0], [mean1], color='#3498db', s=150, marker='D', edgecolor='black', linewidth=2, zorder=5, label=f'Mean')
+    ax.scatter([1], [mean2], color='#9b59b6', s=150, marker='D', edgecolor='black', linewidth=2, zorder=5)
+    
+    ax.set_xlim(-0.3, 1.3)
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels([labels[0], labels[1]], fontsize=11)
+    ax.set_ylabel(ylabel, fontsize=11)
+    ax.set_title(title, fontsize=12, fontweight='bold')
+    
+    # Add improvement count
+    n_improved = sum(1 for d1, d2 in zip(data1, data2) if d2 < d1)
+    n_worse = n - n_improved
+    ax.text(0.5, 0.02, f'Improved: {n_improved}/{n}  |  Worse: {n_worse}/{n}', 
+            transform=ax.transAxes, ha='center', fontsize=9, 
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    
+    # Legend
+    improved_patch = mpatches.Patch(color='#2ecc71', label='Improved')
+    worse_patch = mpatches.Patch(color='#e74c3c', label='Worse')
+    ax.legend(handles=[improved_patch, worse_patch], loc='upper right', fontsize=9)
+    
+    ax.grid(True, alpha=0.3, axis='y')
+
+
+def violin_plot_comparison(ax, errors1, errors2, labels, title):
+    """
+    Create violin plots comparing absolute error distributions.
+    """
+    data = [errors1, errors2]
+    parts = ax.violinplot(data, positions=[0, 1], showmeans=True, showmedians=True)
+    
+    # Color the violins
+    colors = ['#3498db', '#9b59b6']
+    for i, pc in enumerate(parts['bodies']):
+        pc.set_facecolor(colors[i])
+        pc.set_alpha(0.7)
+    
+    # Style the lines
+    for partname in ['cmeans', 'cmedians', 'cbars', 'cmins', 'cmaxes']:
+        if partname in parts:
+            parts[partname].set_color('black')
+    
+    # Add boxplot overlay for quartiles
+    bp = ax.boxplot(data, positions=[0, 1], widths=0.15, 
+                    patch_artist=True, showfliers=False)
+    for patch, color in zip(bp['boxes'], colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.9)
+    
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(labels, fontsize=11)
+    ax.set_ylabel('Absolute Error (K)', fontsize=11)
+    ax.set_title(title, fontsize=12, fontweight='bold')
+    
+    # Add statistics annotation
+    mean1, mean2 = np.mean(errors1), np.mean(errors2)
+    med1, med2 = np.median(errors1), np.median(errors2)
+    ax.text(0.02, 0.98, f'{labels[0]}: μ={mean1:.3f}, med={med1:.3f}\n{labels[1]}: μ={mean2:.3f}, med={med2:.3f}',
+            transform=ax.transAxes, va='top', fontsize=9,
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    
+    ax.grid(True, alpha=0.3, axis='y')
+
+
+
 def perform_aggregate_residual_tests(df1, df2, m1_name, m2_name):
     """
     Performs statistical tests on aggregate residuals.
-    Pairs observations by timestamp and station_id.
+    Pairs observations by LOCAL_TIME and station_id.
     
     Returns dict with test results for absolute errors.
     """
@@ -114,13 +200,13 @@ def perform_aggregate_residual_tests(df1, df2, m1_name, m2_name):
     ])
     
     # Select only necessary columns for joining
-    df1_select = df1.select(['timestamp', 'station_id', 'error_m1', 'abs_error_m1'])
-    df2_select = df2.select(['timestamp', 'station_id', 'error_m2', 'abs_error_m2'])
+    df1_select = df1.select(['LOCAL_TIME', 'station_id', 'error_m1', 'abs_error_m1'])
+    df2_select = df2.select(['LOCAL_TIME', 'station_id', 'error_m2', 'abs_error_m2'])
     
-    # Join on timestamp and station_id to pair observations
+    # Join on LOCAL_TIME and station_id to pair observations
     joined = df1_select.join(
         df2_select,
-        on=['timestamp', 'station_id'],
+        on=['LOCAL_TIME', 'station_id'],
         how='inner'
     )
     
@@ -244,6 +330,110 @@ def aggregate_residual_analysis(models_data):
     return results
 
 
+def generate_visualizations(models_data):
+    """
+    Generate paired dot plots and violin plots for model comparisons.
+    """
+    print("\n=== Generating Visualizations ===")
+    
+    # Create output directory for figures
+    fig_dir = os.path.join(settings.BASE_DIR, 'analysis', 'figures')
+    os.makedirs(fig_dir, exist_ok=True)
+    
+    # === FIGURE 1: Paired Dot Plots for Station-Level RMSE ===
+    fig1, axes1 = plt.subplots(2, 2, figsize=(12, 10))
+    fig1.suptitle('Station-Level RMSE: Paired Comparisons', fontsize=14, fontweight='bold')
+    
+    for col, (m1_name, m2_name) in enumerate(COMPARISONS):
+        if m1_name not in models_data or m2_name not in models_data:
+            continue
+            
+        df1_all = models_data[m1_name]
+        df2_all = models_data[m2_name]
+        
+        for row, (cond_name, cond_val) in enumerate(CONDITIONS):
+            ax = axes1[row, col]
+            
+            df1_cond = df1_all.filter(pl.col('ACMC_BCM') == cond_val)
+            df2_cond = df2_all.filter(pl.col('ACMC_BCM') == cond_val)
+            
+            stats1 = calculate_station_metrics(df1_cond)
+            stats2 = calculate_station_metrics(df2_cond)
+            
+            # Diagnostic: print station counts
+            print(f"{m1_name} vs {m2_name} ({cond_name}): {stats1.height} vs {stats2.height} stations")
+            
+            joined = stats1.join(stats2, on='station_id', how='inner', suffix='_m2')
+            print(f"  After join: {joined.height} matched stations")
+            
+            if joined.height < 2:
+                ax.text(0.5, 0.5, 'Insufficient data', ha='center', va='center', transform=ax.transAxes)
+                continue
+            
+            rmse1 = joined['rmse'].to_numpy()
+            rmse2 = joined['rmse_m2'].to_numpy()
+            
+            paired_dot_plot(ax, rmse1, rmse2, [m1_name, m2_name], 
+                           f'{m1_name} vs {m2_name} ({cond_name})', 'RMSE (K)')
+    
+    plt.tight_layout()
+    fig1_path = os.path.join(fig_dir, 'paired_dot_rmse.png')
+    fig1.savefig(fig1_path, dpi=150, bbox_inches='tight')
+    print(f"Saved: {fig1_path}")
+    
+    # === FIGURE 2: Violin Plots for Absolute Errors ===
+    fig2, axes2 = plt.subplots(2, 2, figsize=(12, 10))
+    fig2.suptitle('Absolute Error Distributions: Model Comparisons', fontsize=14, fontweight='bold')
+    
+    for col, (m1_name, m2_name) in enumerate(COMPARISONS):
+        if m1_name not in models_data or m2_name not in models_data:
+            continue
+            
+        df1_all = models_data[m1_name]
+        df2_all = models_data[m2_name]
+        
+        for row, (cond_name, cond_val) in enumerate(CONDITIONS):
+            ax = axes2[row, col]
+            
+            df1_cond = df1_all.filter(pl.col('ACMC_BCM') == cond_val)
+            df2_cond = df2_all.filter(pl.col('ACMC_BCM') == cond_val)
+            
+            # Calculate absolute errors
+            df1_cond = df1_cond.with_columns(
+                (pl.col('LST_pred') - pl.col('LST_true')).abs().alias('abs_error')
+            )
+            df2_cond = df2_cond.with_columns(
+                (pl.col('LST_pred') - pl.col('LST_true')).abs().alias('abs_error')
+            )
+            
+            # For violin plots, we can use all observations (not necessarily paired)
+            # But for statistical validity matching your tests, let's pair them
+            df1_select = df1_cond.select(['LOCAL_TIME', 'station_id', 'abs_error']).rename({'abs_error': 'abs_err_m1'})
+            df2_select = df2_cond.select(['LOCAL_TIME', 'station_id', 'abs_error']).rename({'abs_error': 'abs_err_m2'})
+            
+            joined = df1_select.join(df2_select, on=['LOCAL_TIME', 'station_id'], how='inner')
+            
+            print(f"Violin {m1_name} vs {m2_name} ({cond_name}): {joined.height} paired observations")
+            
+            if joined.height < 10:
+                ax.text(0.5, 0.5, 'Insufficient data', ha='center', va='center', transform=ax.transAxes)
+                continue
+            
+            err1 = joined['abs_err_m1'].to_numpy()
+            err2 = joined['abs_err_m2'].to_numpy()
+            
+            violin_plot_comparison(ax, err1, err2, [m1_name, m2_name],
+                                  f'{m1_name} vs {m2_name} ({cond_name})')
+    
+    plt.tight_layout()
+    fig2_path = os.path.join(fig_dir, 'violin_abs_errors.png')
+    fig2.savefig(fig2_path, dpi=150, bbox_inches='tight')
+    print(f"Saved: {fig2_path}")
+    
+    plt.close('all')
+    print("\nVisualization generation complete!")
+
+
 def main():
     print("Starting Statistical Analysis...")
     
@@ -268,6 +458,9 @@ def main():
     res_df.to_csv(out_path, index=False)
     print(f"\nResults saved to {out_path}")
     
+    # Generate visualizations
+    generate_visualizations(models_data)
+    
     # Display formatted tables
     print("\n" + "="*80)
     print("STATISTICAL ANALYSIS RESULTS")
@@ -291,6 +484,7 @@ def main():
     if not agg_df.empty:
         print("\nAggregate Residual Analysis (All individual absolute errors):")
         print(agg_df.drop(columns=['Analysis']).to_markdown(index=False))
+
 
 
 if __name__ == "__main__":
