@@ -287,8 +287,10 @@ def plot_2x4_compact_publication(models_data, output_dir):
             df = models_data[model]
             display_name = MODEL_TITLES.get(model, model)
             
+            # Inside the row/column loop
             subset = df.filter(pl.col('ACMC_BCM') == cond_val)
             metrics = calculate_metrics(subset)
+            print(f"Model: {model}, Condition: {cond_name}, N: {metrics['n']}")
             
             hb = plot_density_hexbin(ax, subset, vmin, vmax, norm=norm)
             if hb: combined_hb = hb
