@@ -55,7 +55,7 @@ def calculate_metrics(df, true_col='LST_true', pred_col='LST_pred'):
     metrics = {
         'rmse': np.sqrt(mean_squared_error(y_true, y_pred)),
         'r2': r2_score(y_true, y_pred),
-        'bias': np.mean(error),
+        'bias': np.median(error),
         'mean': np.mean(y_true), 
         'error_std': np.std(error),
         'n': df.height
