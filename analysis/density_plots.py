@@ -334,7 +334,115 @@ def plot_2x4_compact_publication(models_data, output_dir):
     plt.savefig(os.path.join(output_dir, 'density_grid_2x4_compact.jpg'), dpi=300, bbox_inches='tight')
     plt.close(fig)
 
-# --- Function 4: BLAM-C Compact Grid (1x2) ---
+# --- Function 4: 2x2 All-Sky Compact Grid ---
+def plot_2x2_allsky_compact(models_data, output_dir):
+    """
+    2 rows x 2 cols All-Sky grid with shared colorbar.
+    Top row: BLM, BLAM
+    Bottom row: CIM, CIAM
+    """
+    print("Generating 2x2 All-Sky compact grid...")
+    
+    # Define layout: rows × cols
+    model_grid = [
+        ['BLM', 'BLAM'],
+        ['CIM', 'CIAM']
+    ]
+    
+    # Check all models are available
+    all_models = [m for row in model_grid for m in row]
+    available_models = [m for m in all_models if m in models_data]
+    if len(available_models) < len(all_models):
+        missing = set(all_models) - set(available_models)
+        print(f"Missing models for 2x2 grid: {missing}")
+        return
+
+    vmin, vmax = get_global_limits(models_data)
+    
+    # First pass: collect all hexbin data to find global color limits
+    all_counts = []
+    for model in all_models:
+        df = models_data[model]
+        if df.height > 0:
+            fig_temp, ax_temp = plt.subplots()
+            hb_temp = ax_temp.hexbin(
+                df['LST_true'].to_numpy(), 
+                df['LST_pred'].to_numpy(), 
+                gridsize=500, mincnt=1,
+                extent=[vmin, vmax, vmin, vmax]
+            )
+            counts = hb_temp.get_array()
+            all_counts.extend(counts)
+            plt.close(fig_temp)
+    
+    # Global color limits with log norm
+    c_min = 1
+    c_max = max(all_counts) if all_counts else 1
+    norm = LogNorm(vmin=c_min, vmax=c_max)
+    
+    fig, axes = plt.subplots(2, 2, figsize=(14, 14))
+    plt.subplots_adjust(wspace=0.05, hspace=0.08, bottom=0.10, left=0.10, right=0.88)
+    
+    labels = list(string.ascii_lowercase)
+    label_idx = 0
+    stats_fontsize = int(16 * 1.2)
+    
+    combined_hb = None
+    
+    for row_idx, row_models in enumerate(model_grid):
+        for col_idx, model in enumerate(row_models):
+            ax = axes[row_idx, col_idx]
+            df = models_data[model]
+            display_name = MODEL_TITLES.get(model, model)
+            
+            # All-Sky: use entire dataset (no cloud filtering)
+            subset = df
+            metrics = calculate_metrics(subset)
+            print(f"Model: {model}, Condition: All-Sky, N: {metrics['n']}")
+            
+            hb = plot_density_hexbin(ax, subset, vmin, vmax, norm=norm)
+            if hb: combined_hb = hb
+            
+            ax.text(0.05, 0.95, f"{display_name}\nAll-Sky", transform=ax.transAxes, fontsize=18, fontweight='bold', ha='left', va='top')
+            
+            add_subpanel_label(ax, f"{labels[label_idx]}")
+            label_idx += 1
+            
+            add_stats_text(ax, metrics, fontsize=stats_fontsize)
+            
+            ax.set_aspect('equal')
+            ax.set_xlim(vmin, vmax)
+            ax.set_ylim(vmin, vmax)
+            
+            ax.xaxis.set_major_locator(MaxNLocator(nbins=4))
+            ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
+            
+            # X tick labels only on bottom row
+            if row_idx == 0:
+                ax.tick_params(labelbottom=False)
+            else:
+                ax.tick_params(labelbottom=True)
+            
+            # Y tick labels only on left column
+            if col_idx > 0:
+                ax.tick_params(labelleft=False)
+            else:
+                ax.tick_params(labelleft=True)
+
+    # Centered Axis Labels
+    fig.text(0.48, 0.05, 'Ground Station LST (K)', ha='center', fontsize=25)
+    fig.text(0.03, 0.5, 'Predicted LST (K)', va='center', rotation='vertical', fontsize=25)
+
+    # Shared Colorbar
+    if combined_hb:
+        cbar_ax = fig.add_axes([0.90, 0.15, 0.025, 0.70])
+        cbar = fig.colorbar(combined_hb, cax=cbar_ax)
+        cbar.set_label('Point Count')
+        
+    plt.savefig(os.path.join(output_dir, 'density_grid_2x2_allsky_compact.jpg'), dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+# --- Function 5: BLAM-C Compact Grid (1x2) ---
 def plot_blam_c_2x1_compact(models_data, output_dir):
     """
     BLAM-C 1x2 grid with log scale density and shared colorbar.
@@ -448,6 +556,7 @@ def main():
     plot_individual_model_conditions(models_data, output_dir)
     plot_standard_grid(models_data, output_dir)
     plot_2x4_compact_publication(models_data, output_dir)
+    plot_2x2_allsky_compact(models_data, output_dir)
     plot_blam_c_2x1_compact(models_data, output_dir)
     
     print("All tasks completed.")
