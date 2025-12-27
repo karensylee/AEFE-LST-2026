@@ -28,7 +28,7 @@ matplotlib.rcParams.update({
     'font.size': 8,
     'axes.linewidth': 1.0,
     'xtick.direction': 'in',
-    'ytick.direction': 'in',
+    'ytick.direction': 'out',
     'figure.dpi': 100,
     'savefig.dpi': 300,
     'savefig.bbox': 'tight'

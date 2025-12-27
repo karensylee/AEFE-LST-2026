@@ -156,69 +156,272 @@ models/xgb/{MODEL}/
     └── ...
 ```
 
-### Step 6: Generate Analysis Plots
+---
+
+## Step 6: Analysis & Visualization
+
+The project includes comprehensive analysis scripts for evaluating model performance, generating publication-ready figures, and performing statistical tests.
+
+### Analysis Scripts Overview
+
+| Script | Description | Output Directory |
+|--------|-------------|------------------|
+| `analysis/density_plots.py` | Density scatter plots (True vs Predicted LST) | `figures/density_plots/` |
+| `analysis/heatmap_plots.py` | Station-level error metric heatmaps | `figures/heatmaps/` |
+| `analysis/gantt_chart.py` | Temporal data availability visualization | `figures/analysis/` |
+| `analysis/cloud_by_station.py` | Cloud percentage and BLAM vs BLM metrics by station | `figures/cloud_analysis/` |
+| `analysis/hourly_daily_rmse.py` | Hourly and daily RMSE temporal analysis | `figures/rmse_temporal/` |
+| `analysis/morans_i.py` | Moran's I spatial autocorrelation analysis | `figures/morans_i/` |
+| `analysis/paired_dot_plots.py` | Paired dot (slope) plots for model comparisons | `figures/statistical_tests/` |
+| `analysis/statistical_analysis.py` | Core statistical functions and metrics export | `figures/statistical_tests/` |
+
+---
+
+### Density Plots
 
 ```bash
 python analysis/density_plots.py
 ```
 
-**Output**: `figures/densityplots/`
+Generates density scatter plots comparing True vs Predicted LST:
 
-### Step 6: Analysis & Aggregation
+- **Individual plots**: Clear-Sky, Cloudy-Sky, and All-Sky per model
+- **2x4 Compact Grid**: Rows (Clear-Sky, Cloudy-Sky) × Columns (BLM, BLAM, CIM, CIAM)
+- **2x2 All-Sky Grid**: All-Sky comparison across all models
+- **BLAM-C plots**: 1x2 grid for the context-only model
 
-The project includes several scripts for aggregating data and analyzing model performance:
+**Output**: `figures/density_plots/`
 
-| Script | Description |
-|--------|-------------|
-| **`src/aggregate_5min_to_hourly_daily_monthly.py`** | **Data Aggregation**: Converts 5-minute samples to Hourly, Daily, and Monthly means. Applies QC thresholds (e.g., ≥10 obs/hr, ≥22 hrs/day) based on Lucas et al. (2020). |
-| **`analysis/density_plots.py`** | **Validation**: Generates density scatter plots comparing True vs Predicted LST. Stratifies results by Clear-Sky, Cloudy-Sky, and All-Sky conditions. |
-| **`analysis/monthly_analysis.py`** | **Performance Constraints**: Computes publication-ready monthly metrics (RMSE, R², Bias) and visualizes them alongside sample counts and cloudiness proportions. |
-| **`analysis/heatmap_plots.py`** | **Spatial Analysis**: Generates heatmaps of error metrics across all stations, ordered by station ID, elevation, or climate division. Useful for identifying spatial bias. |
-| **`analysis/gantt_chart.py`** | **Data Availability**: Visualizes temporal data availability for 2024, highlighting gaps and active periods for each station. |
+---
+
+### Heatmap Plots
 
 ```bash
-# Example: Generate density plots
-python analysis/density_plots.py
+python analysis/heatmap_plots.py
+```
 
-# Example: Generate monthly analysis figures
-python analysis/monthly_analysis.py
+Generates heatmaps comparing model performance across stations:
 
-# Example: Generate availability chart
+- **Metrics**: RMSE and STD differences (BLAM - BLM, CIAM - CIM)
+- **Conditions**: Clear-Sky, Cloudy-Sky, All-Sky
+- **Ordering options**: Station ID, Elevation, or Climate Division
+
+**Output**: `figures/heatmaps/`
+
+---
+
+### Gantt Chart (Data Availability)
+
+```bash
 python analysis/gantt_chart.py
 ```
 
-**Output**: All analysis figures are saved to `figures/`.
+Visualizes temporal data availability for all stations throughout 2024:
+
+- Identifies continuous data blocks and gaps
+- Shows availability intervals per station
+- Useful for understanding data coverage
+
+**Output**: `figures/analysis/station_availability.jpg`
+
+---
+
+### Cloud Analysis by Station
+
+```bash
+python analysis/cloud_by_station.py
+```
+
+Analyzes cloud coverage patterns and model performance metrics by station:
+
+- **Cloud percentage bar charts**: Horizontal bars showing % cloudy observations
+- **Observation counts**: Total samples per station with cloud breakdown
+- **BLAM vs BLM metrics**: RMSE and STD differences per station
+- **Scatter plots**: Cloud percentage vs observations, colored by RMSE difference
+- **Summary statistics**: CSV export with all metrics
+
+**Output**: `figures/cloud_analysis/`
+
+---
+
+### Hourly & Daily RMSE Analysis
+
+```bash
+python analysis/hourly_daily_rmse.py
+```
+
+Generates temporal RMSE comparisons between BLAM and BLM:
+
+- **Hourly Box Plots**: Paired box plots comparing BLAM and BLM RMSE by local hour (HST)
+  - Includes secondary axis showing cloud percentage
+  - Observation count tables below plots
+- **Daily Line Plots**: Daily RMSE throughout 2024 with 7-day rolling mean
+  - Cloud percentage overlay on secondary axis
+  - Monthly observation count tables
+
+**Output**: `figures/rmse_temporal/`
+
+---
+
+### Moran's I Spatial Autocorrelation
+
+```bash
+python analysis/morans_i.py
+```
+
+Performs Global and Local Moran's I analysis on model residuals:
+
+- **Global Moran's I**: Assesses overall spatial clustering of errors
+- **Local Moran's I (LISA)**: Identifies local clusters (High-High, Low-Low, etc.)
+- **Visualizations**:
+  - Moran scatterplots
+  - LISA cluster maps overlaid on Hawaiian islands
+- **Metrics analyzed**: RMSE, MAE, Bias, STD
+- **Weight types**: Inverse distance, KNN, distance band
+
+**Output**: `figures/morans_i/`
+
+---
+
+### Paired Dot Plots (Statistical Visualizations)
+
+```bash
+python analysis/paired_dot_plots.py
+```
+
+Generates paired dot (slope) plots for station-level model comparisons:
+
+- **2x4 Compact Panel**:
+  - Rows: Clear-Sky, Cloudy-Sky
+  - Columns: BLM vs BLAM (RMSE), BLM vs BLAM (STD), CIM vs CIAM (RMSE), CIM vs CIAM (STD)
+- **Individual metric plots**: Separate 2x2 grids for RMSE and STD
+- **Features**:
+  - Wilcoxon signed-rank test p-values in titles
+  - Improvement vs No Improvement counts
+  - Mean markers (diamonds)
+
+**Output**: `figures/statistical_tests/`
+
+---
+
+### Statistical Analysis
+
+```bash
+python analysis/statistical_analysis.py
+```
+
+Core statistical module for computing and exporting model metrics:
+
+- **Metrics computed**: RMSE, R², STD, Median Bias
+- **Conditions**: Clear-Sky, Cloudy-Sky, All-Sky
+- **Statistical tests**: Wilcoxon signed-rank test, Cohen's q effect size
+- **Output**: `model_metrics_summary.csv`
+
+**Output**: `figures/statistical_tests/model_metrics_summary.csv`
+
+---
+
+## Data Aggregation
+
+The `src/` directory includes temporal aggregation utilities:
+
+### 5-Minute to Hourly/Daily/Monthly Aggregation
+
+```bash
+python -m src.aggregate_5min_to_hourly_daily_monthly
+```
+
+Converts 5-minute observations to aggregated time scales with quality control thresholds based on Lucas et al. (2020):
+
+| Aggregation | QC Threshold |
+|-------------|--------------|
+| **Hourly** | ≥10 of 12 possible 5-min observations |
+| **Daily** | ≥22 of 24 possible hourly observations |
+| **Monthly** | 100% daily completeness required |
+
+---
 
 ## Project Structure
 
 ```
 lst/
 ├── config/
-│   └── settings.py          # Feature definitions, paths, model params
+│   └── settings.py              # Feature definitions, paths, model params
 ├── src/
-│   ├── process_data.py      # Data merging and feature engineering
-│   ├── data_loader.py       # Data loading utilities
-│   ├── trainer.py           # XGBoost training logic
-│   └── evaluation.py        # Metrics calculation
+│   ├── process_data.py          # Data merging and feature engineering
+│   ├── data_loader.py           # Data loading utilities
+│   ├── trainer.py               # XGBoost training logic
+│   ├── evaluation.py            # Metrics calculation
+│   ├── aggregation.py           # Temporal aggregation (5min → hourly/daily/monthly)
+│   ├── aggregate_5min_to_hourly_daily_monthly.py  # Aggregation runner script
+│   ├── process_climate.py       # Climate division processing
+│   └── station_processing.py    # Station data utilities
 ├── analysis/
-│   └── density_plots.py     # Visualization
+│   ├── density_plots.py         # Density scatter plots
+│   ├── heatmap_plots.py         # Station metric heatmaps
+│   ├── gantt_chart.py           # Data availability visualization
+│   ├── cloud_by_station.py      # Cloud analysis with metrics
+│   ├── hourly_daily_rmse.py     # Temporal RMSE analysis
+│   ├── morans_i.py              # Spatial autocorrelation analysis
+│   ├── paired_dot_plots.py      # Statistical visualization
+│   ├── statistical_analysis.py  # Core statistical functions
+│   ├── inspect_goes18.py        # GOES-18 data inspection
+│   └── inspect_goes18_acmc.py   # ACMC cloud mask inspection
+├── notebooks/
+│   └── example_gantt_chart.ipynb  # Example Jupyter notebook
 ├── datasets/
-│   ├── raw/                  # Downloaded data (gitignored)
-│   ├── processed/            # ML-ready CSVs (gitignored)
-│   └── stations/             # Station metadata
+│   ├── raw/                     # Downloaded data (gitignored)
+│   ├── processed/               # ML-ready CSVs (gitignored)
+│   └── stations/                # Station metadata
 ├── models/
-│   └── xgb/                  # XGBoost models by type
+│   └── xgb/                     # XGBoost models by type
 │       ├── BLM/
 │       ├── BLAM/
 │       ├── BLAM-C/
 │       ├── CIM/
 │       └── CIAM/
-├── figures/                  # Generated plots
-├── download.py               # Ground data download
-├── goes18mcmipc.py           # GOES MCMIPC download
-├── goes18acmc.py             # GOES ACMC cloud mask
-├── main.py                   # Training pipeline
+├── figures/                     # Generated analysis figures
+│   ├── analysis/                # General analysis plots
+│   ├── cloud_analysis/          # Cloud percentage visualizations
+│   ├── density_plots/           # Density scatter plots
+│   ├── heatmaps/                # Station heatmaps
+│   ├── morans_i/                # Spatial autocorrelation plots
+│   ├── rmse_temporal/           # Hourly/daily RMSE plots
+│   └── statistical_tests/       # Statistical visualizations & CSVs
+├── download.py                  # Ground data download
+├── goes18mcmipc.py              # GOES MCMIPC download
+├── goes18acmc.py                # GOES ACMC cloud mask
+├── main.py                      # Training pipeline
 └── requirements.txt
+```
+
+## Quick Start
+
+Run all analysis scripts after training:
+
+```bash
+# Generate all visualizations
+python analysis/density_plots.py
+python analysis/heatmap_plots.py
+python analysis/gantt_chart.py
+python analysis/cloud_by_station.py
+python analysis/hourly_daily_rmse.py
+python analysis/morans_i.py
+python analysis/paired_dot_plots.py
+python analysis/statistical_analysis.py
+```
+
+Or run them sequentially:
+
+```bash
+python analysis/density_plots.py && \
+python analysis/heatmap_plots.py && \
+python analysis/gantt_chart.py && \
+python analysis/cloud_by_station.py && \
+python analysis/hourly_daily_rmse.py && \
+python analysis/morans_i.py && \
+python analysis/paired_dot_plots.py && \
+python analysis/statistical_analysis.py
 ```
 
 ## Acknowledgments

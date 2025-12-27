@@ -6,6 +6,7 @@ __pycache__/
 # Environment
 .env
 .venv
+.venv-backup/
 venv/
 env/
 ENV/
