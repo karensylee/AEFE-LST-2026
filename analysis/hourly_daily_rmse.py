@@ -112,8 +112,15 @@ def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
         blam_rmse.append(np.sqrt(blam_errors))
         blm_rmse.append(np.sqrt(blm_errors))
     
-    # Create figure
-    fig, ax = plt.subplots(figsize=(18, 8))
+    # Calculate hourly observation counts
+    hourly_counts = df_blam.group_by('hour_hst').agg([
+        pl.len().alias('count')
+    ]).sort('hour_hst')
+    obs_per_hour = hourly_counts['count'].to_list()
+    
+    # Create figure with extra space for table
+    fig, (ax, ax_table) = plt.subplots(2, 1, figsize=(18, 10), 
+                                        gridspec_kw={'height_ratios': [4, 1]})
     
     # Box plot positions
     width = 0.35
@@ -179,8 +186,26 @@ def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     ]
     ax.legend(handles=legend_elements, loc='upper right')
     
+    # Create table showing observation counts per hour
+    ax_table.axis('off')
+    table_data = [[f'{n:,}' for n in obs_per_hour]]
+    col_labels = [f'{h:02d}' for h in hours]
+    table = ax_table.table(
+        cellText=table_data,
+        colLabels=col_labels,
+        rowLabels=['n (5-min obs)'],
+        loc='center',
+        cellLoc='center'
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1.0, 1.5)
+    ax_table.set_title('Number of 5-minute observations per hour', fontsize=12, pad=10)
+    
+    plt.tight_layout()
+    
     # Save figure
-    output_path = os.path.join(output_dir, 'BLAM_vs_BLM_hourly_rmse_boxplot.png')
+    output_path = os.path.join(output_dir, 'BLAM_vs_BLM_hourly_rmse_boxplot.jpg')
     fig.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
     
@@ -218,8 +243,15 @@ def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     dates_blam_dt = [datetime.date(d.year, d.month, d.day) for d in dates_blam]
     dates_blm_dt = [datetime.date(d.year, d.month, d.day) for d in dates_blm]
     
-    # Create figure
-    fig, ax = plt.subplots(figsize=(16, 7))
+    # Calculate daily observation counts
+    daily_counts = df_blam.group_by('date_hst').agg([
+        pl.len().alias('count')
+    ]).sort('date_hst')
+    obs_per_day = daily_counts['count'].to_list()
+    
+    # Create figure with extra space for table
+    fig, (ax, ax_table) = plt.subplots(2, 1, figsize=(16, 9), 
+                                        gridspec_kw={'height_ratios': [4, 1]})
     
     # Plot RMSE lines for both models
     ax.plot(dates_blam_dt, rmse_blam, color=MODEL_COLORS['BLAM'], linewidth=1.5, alpha=0.8, label='BLAM')
@@ -275,8 +307,37 @@ def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
         bbox=dict(boxstyle='round', facecolor='white', alpha=0.9)
     )
     
+    # Create table showing monthly observation counts (summarized)
+    ax_table.axis('off')
+    
+    # Aggregate daily counts by month for a cleaner table
+    monthly_obs = df_blam.with_columns(
+        pl.col('datetime_hst').dt.strftime('%b').alias('month_name'),
+        pl.col('datetime_hst').dt.month().alias('month_num')
+    ).group_by(['month_num', 'month_name']).agg(
+        pl.len().alias('count')
+    ).sort('month_num')
+    
+    month_labels = monthly_obs['month_name'].to_list()
+    month_counts = monthly_obs['count'].to_list()
+    
+    table_data = [[f'{n:,}' for n in month_counts]]
+    table = ax_table.table(
+        cellText=table_data,
+        colLabels=month_labels,
+        rowLabels=['n (obs/month)'],
+        loc='center',
+        cellLoc='center'
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(11)
+    table.scale(1.0, 1.5)
+    ax_table.set_title('Number of observations per month', fontsize=12, pad=10)
+    
+    plt.tight_layout()
+    
     # Save figure
-    output_path = os.path.join(output_dir, 'BLAM_vs_BLM_daily_rmse_lineplot.png')
+    output_path = os.path.join(output_dir, 'BLAM_vs_BLM_daily_rmse_lineplot.jpg')
     fig.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
     
