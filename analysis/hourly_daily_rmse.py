@@ -186,6 +186,7 @@ def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     # Save figure
     output_path = os.path.join(output_dir, 'BLAM_vs_BLM_hourly_rmse_boxplot.jpg')
     fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.show()
     plt.close(fig)
     
     print(f"Saved: {output_path}")
@@ -303,6 +304,7 @@ def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     # Save figure
     output_path = os.path.join(output_dir, 'BLAM_vs_BLM_daily_rmse_lineplot.jpg')
     fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.show()
     plt.close(fig)
     
     print(f"Saved: {output_path}")

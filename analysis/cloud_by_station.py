@@ -253,7 +253,7 @@ def plot_observations_by_station(stats: pl.DataFrame, output_dir: str) -> str:
     ax.set_xlabel('Total Observations')
     ax.set_ylabel('Station ID')
     ax.set_title('Total Observations by Station with BLAM vs BLM Performance\n(colored by cloud %, sorted by obs count)', 
-                 fontweight='bold', fontsize=14)
+                 fontweight='bold', fontsize=12)
     ax.grid(axis='x', alpha=0.3)
     
     # Extend plot area
@@ -262,7 +262,7 @@ def plot_observations_by_station(stats: pl.DataFrame, output_dir: str) -> str:
     # Add colorbar
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(0, 100))
     sm.set_array([])
-    cbar = plt.colorbar(sm, ax=ax, shrink=0.5, aspect=20, pad=0.02)
+    cbar = plt.colorbar(sm, ax=ax, shrink=0.9, aspect=20, pad=0.02)
     cbar.set_label('Cloud %', fontsize=10)
     
     # Save figure

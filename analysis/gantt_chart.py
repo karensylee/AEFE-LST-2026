@@ -166,7 +166,13 @@ def get_availability_intervals(df, gap_threshold_mins=10):
     
     return intervals
 
-def plot_layered_gantt(avail_df, year=2024, output_path="station_availability.png"):
+def plot_layered_gantt(avail_df, year=2024, output_path=None):
+    # If no output_path specified, use default location in figures/analysis
+    if output_path is None:
+        base_fig_dir = os.path.join(settings.BASE_DIR, 'figures/analysis')
+        os.makedirs(base_fig_dir, exist_ok=True)
+        output_path = os.path.join(base_fig_dir, f'station_availability_{year}.jpg')
+    
     print(f"Generating Gantt chart for year {year}...")
     
     # Check if empty
@@ -242,7 +248,7 @@ def plot_layered_gantt(avail_df, year=2024, output_path="station_availability.pn
     # Formatting
     ax.set_ylim(-0.6, len(stations_display) - 0.4)
     ax.set_yticks(range(len(stations_display)))
-    ax.set_yticklabels(stations_display, color='black', fontsize=10, family='monospace')
+    ax.set_yticklabels(stations_display, color='black', fontsize=10, family='serif')
     ax.set_ylabel("Station Name", color='black', fontsize=14, fontweight='bold')
     ax.set_xlabel(f"Date ({year})", color='black', fontsize=14, fontweight='bold')
     

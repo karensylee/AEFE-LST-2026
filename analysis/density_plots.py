@@ -332,6 +332,7 @@ def plot_2x4_compact_publication(models_data, output_dir):
         cbar.set_label('Point Count')
         
     plt.savefig(os.path.join(output_dir, 'density_grid_2x4_compact.jpg'), dpi=300, bbox_inches='tight')
+    plt.show()
     plt.close(fig)
 
 # --- Function 4: 2x2 All-Sky Compact Grid ---
@@ -440,6 +441,7 @@ def plot_2x2_allsky_compact(models_data, output_dir):
         cbar.set_label('Point Count')
         
     plt.savefig(os.path.join(output_dir, 'density_grid_2x2_allsky_compact.jpg'), dpi=300, bbox_inches='tight')
+    plt.show()
     plt.close(fig)
 
 # --- Function 5: BLAM-C Compact Grid (1x2) ---
@@ -527,6 +529,7 @@ def plot_blam_c_2x1_compact(models_data, output_dir):
         cbar.set_label('Point Count')
         
     plt.savefig(os.path.join(output_dir, 'density_grid_blam_c_1x2.jpg'), dpi=300, bbox_inches='tight')
+    plt.show()
     plt.close(fig)
 
 def load_data():

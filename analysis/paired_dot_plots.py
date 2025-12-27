@@ -118,6 +118,7 @@ def plot_2x4_compact_panel(models_data, output_dir):
     
     out_path = os.path.join(fig_dir, 'paired_dot_2x4_compact.jpg')
     plt.savefig(out_path, dpi=300, bbox_inches='tight')
+    plt.show()
     plt.close(fig)
     print(f"Saved: {out_path}")
 
@@ -172,9 +173,6 @@ def main():
     
     # Generate the new 2x4 compact panel
     plot_2x4_compact_panel(models_data, output_dir)
-    
-    # Also generate original individual metric plots
-    plot_individual_metrics(models_data, output_dir)
     
     print("\nAll paired dot plots generated.")
 
