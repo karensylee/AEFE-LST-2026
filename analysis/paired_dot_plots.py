@@ -20,10 +20,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config import settings
 from analysis.statistical_analysis import load_data, calculate_station_metrics, METRICS, CONDITIONS, COMPARISONS
 
-# --- Configuration ---
+# --- Configuration (matching density_plots.py template) ---
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = ['Times New Roman', 'DejaVu Serif']
-plt.rcParams['font.size'] = 18
+plt.rcParams['font.size'] = 25
 plt.rcParams['axes.linewidth'] = 1.0
 plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
@@ -42,8 +42,8 @@ def paired_dot_plot(ax, data1, data2, labels, title, ylabel, p_value, metric_typ
     
     ax.set_xlim(-0.3, 1.3)
     ax.set_xticks([0, 1])
-    ax.set_xticklabels(labels, fontsize=16)
-    ax.set_ylabel(ylabel, fontsize=18)
+    ax.set_xticklabels(labels, fontsize=20)
+    ax.set_ylabel(ylabel, fontsize=22)
     
     p_str = (p_value < 0.001 and "p < 0.001") or f"p = {p_value:.4f}"
     ax.set_title(f"{metric_type}: {labels[0]} vs {labels[1]}\nWilcoxon {p_str}", fontsize=16, fontweight='bold', pad=25)
@@ -52,7 +52,7 @@ def paired_dot_plot(ax, data1, data2, labels, title, ylabel, p_value, metric_typ
     ax.text(0.22, 1.05, f"Improvement: {n_imp}/{n}", transform=ax.transAxes, color='#1a7f37', fontsize=15, fontweight='bold', ha='center', va='top')
     ax.text(0.73, 1.05, f"No Improvement: {n-n_imp}/{n}", transform=ax.transAxes, color='#b91c1c', fontsize=15, fontweight='bold', ha='center', va='top')
     
-    label_char and ax.text(0.01, 0.99, label_char, transform=ax.transAxes, fontsize=18, fontweight='bold', ha='left', va='top', bbox=dict(facecolor='white', edgecolor='black', boxstyle='square,pad=0.2'))
+    label_char and ax.text(0.05, 0.05, label_char, transform=ax.transAxes, fontsize=24, fontweight='bold', ha='left', va='bottom', bbox=dict(facecolor='white', alpha=1.0, edgecolor='black', boxstyle='square,pad=0.2'))
     
     show_legend and ax.legend(handles=[
         mpatches.Patch(color='#2ecc71', label='Improvement'),
@@ -84,8 +84,6 @@ def plot_2x4_compact_panel(models_data, output_dir):
     
     fig, axes = plt.subplots(2, 4, figsize=(26, 14))
     plt.subplots_adjust(wspace=0.22, hspace=0.25, bottom=0.06, left=0.05, right=0.98, top=0.88)
-    
-    fig.suptitle('Station-Level Metrics: Paired Comparisons', fontsize=22, fontweight='bold')
     
     labels = list(string.ascii_lowercase)
     label_idx = 0

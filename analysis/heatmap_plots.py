@@ -20,6 +20,20 @@ if project_root not in sys.path:
 
 from config import settings
 
+# Matplotlib configuration (matching density_plots.py template)
+import matplotlib
+matplotlib.rcParams.update({
+    'font.family': 'serif',
+    'font.serif': ['Times New Roman', 'DejaVu Serif'],
+    'font.size': 8,
+    'axes.linewidth': 1.0,
+    'xtick.direction': 'in',
+    'ytick.direction': 'in',
+    'figure.dpi': 100,
+    'savefig.dpi': 300,
+    'savefig.bbox': 'tight'
+})
+
 # =============================================================================
 # CONSTANTS
 # =============================================================================
@@ -357,7 +371,7 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
     # Save figure
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
-        filename = f"station_metrics_heatmap_{compare}_vs_{baseline}_by_{order_by}.png"
+        filename = f"station_metrics_heatmap_{compare}_vs_{baseline}_by_{order_by}.jpg"
         filepath = os.path.join(output_dir, filename)
         plt.savefig(filepath, dpi=300, bbox_inches='tight')
         print(f"✓ Heatmap saved to: {filepath}")

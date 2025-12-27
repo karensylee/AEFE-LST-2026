@@ -6,8 +6,6 @@ This script visualizes:
 2. Total observations per station
 3. RMSE and STD differences (BLAM - BLM) per station
 4. Summary statistics
-
-Author: Generated for LST Analysis
 """
 
 import os
@@ -20,17 +18,15 @@ import matplotlib.pyplot as plt
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config import settings
 
-# Matplotlib configuration for publication-quality figures
-plt.rcParams.update({
+# Matplotlib configuration (matching density_plots.py template)
+import matplotlib
+matplotlib.rcParams.update({
     'font.family': 'serif',
-    'font.serif': ['Times New Roman', 'DejaVu Serif', 'Liberation Serif', 'Georgia'],
+    'font.serif': ['Times New Roman', 'DejaVu Serif'],
     'font.size': 12,
-    'axes.labelsize': 14,
-    'axes.titlesize': 16,
-    'axes.titleweight': 'bold',
-    'xtick.labelsize': 10,
-    'ytick.labelsize': 10,
-    'legend.fontsize': 11,
+    'axes.linewidth': 1.0,
+    'xtick.direction': 'in',
+    'ytick.direction': 'in',
     'figure.dpi': 100,
     'savefig.dpi': 300,
     'savefig.bbox': 'tight'
@@ -186,9 +182,10 @@ def plot_cloud_percentage_bar(stats: pl.DataFrame, output_dir: str) -> str:
         f"Mean Cloud: {mean_cloud:.1f}%\n"
         f"Median Cloud: {median_cloud:.1f}%"
     )
-    ax.text(1.15, 0.98, stats_text, transform=ax.transAxes, fontsize=10,
-            verticalalignment='top', fontfamily='monospace',
-            bbox=dict(boxstyle='round', facecolor='white', alpha=0.9, edgecolor='gray'))
+    ax.text(0.98, 0.98, stats_text, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', horizontalalignment='right', fontfamily='monospace',
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.95, edgecolor='gray'),
+            zorder=100)
     
     plt.tight_layout()
     
@@ -409,7 +406,6 @@ def main():
     # Generate visualizations
     figures = []
     figures.append(plot_cloud_percentage_bar(stats, output_dir))
-    figures.append(plot_observations_by_station(stats, output_dir))
     figures.append(plot_cloud_vs_observations_scatter(stats, output_dir))
     
     # Save statistics to CSV

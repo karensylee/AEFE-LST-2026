@@ -21,6 +21,20 @@ if project_root not in sys.path:
 
 from config import settings
 
+# Matplotlib configuration (matching density_plots.py template)
+import matplotlib
+matplotlib.rcParams.update({
+    'font.family': 'serif',
+    'font.serif': ['Times New Roman', 'DejaVu Serif'],
+    'font.size': 10,
+    'axes.linewidth': 1.0,
+    'xtick.direction': 'in',
+    'ytick.direction': 'in',
+    'figure.dpi': 100,
+    'savefig.dpi': 300,
+    'savefig.bbox': 'tight'
+})
+
 def load_data():
     """Load and merge ML-ready data with station metadata."""
     print("Loading ML-ready data...")
@@ -260,7 +274,7 @@ def main():
     # Setup output dir
     base_fig_dir = os.path.join(settings.BASE_DIR, 'figures/analysis')
     os.makedirs(base_fig_dir, exist_ok=True)
-    output_path = os.path.join(base_fig_dir, f'station_availability_{args.year}.png')
+    output_path = os.path.join(base_fig_dir, f'station_availability_{args.year}.jpg')
     
     # Run pipeline
     df = load_data()

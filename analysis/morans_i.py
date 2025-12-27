@@ -31,6 +31,23 @@ if project_root not in sys.path:
 
 from config import settings
 
+# Matplotlib configuration (matching density_plots.py template)
+import matplotlib
+matplotlib.rcParams.update({
+    'font.family': 'serif',
+    'font.serif': ['Times New Roman', 'DejaVu Serif'],
+    'font.size': 12,
+    'axes.linewidth': 1.0,
+    'xtick.direction': 'in',
+    'ytick.direction': 'in',
+    'figure.dpi': 100,
+    'savefig.dpi': 300,
+    'savefig.bbox': 'tight'
+})
+
+# Coastline shapefile path
+COASTLINE_PATH = os.path.join(settings.BASE_DIR, 'datasets/other/Coastline/Coastline.shp')
+
 # Configuration
 STATIONS_PATH = os.path.join(settings.BASE_DIR, 'datasets/stations/stations_aef_hiclimatedivision.csv')
 CONDITIONS = [('Clear-Sky', 0), ('Cloudy-Sky', 1), ('All-Sky', None)]
@@ -366,7 +383,7 @@ def plot_moran_scatter(values, weights, model_name, condition, output_dir):
     plt.tight_layout()
     
     os.makedirs(output_dir, exist_ok=True)
-    plot_path = os.path.join(output_dir, f'moran_scatter_{model_name}_{condition.replace("-", "_")}.png')
+    plot_path = os.path.join(output_dir, f'moran_scatter_{model_name}_{condition.replace("-", "_")}.jpg')
     plt.savefig(plot_path, dpi=150, bbox_inches='tight')
     plt.close()
     print(f"  Saved: {plot_path}")
@@ -374,7 +391,7 @@ def plot_moran_scatter(values, weights, model_name, condition, output_dir):
 
 def plot_lisa_map(stations_df, lisa_result, model_name, condition, output_dir):
     """
-    Create LISA cluster map.
+    Create LISA cluster map with Hawaiian islands coastline.
     
     Args:
         stations_df: DataFrame with station coordinates
@@ -387,6 +404,24 @@ def plot_lisa_map(stations_df, lisa_result, model_name, condition, output_dir):
         return
     
     fig, ax = plt.subplots(figsize=(12, 10))
+    
+    # Add Hawaii coastline outline
+    try:
+        import geopandas as gpd
+        if os.path.exists(COASTLINE_PATH):
+            coastline = gpd.read_file(COASTLINE_PATH)
+            # Reproject to EPSG:4326 (WGS84) to match station coordinates
+            if coastline.crs is not None and coastline.crs != 'EPSG:4326':
+                coastline = coastline.to_crs('EPSG:4326')
+            elif coastline.crs is None:
+                coastline = coastline.set_crs('EPSG:4326')
+            coastline.plot(ax=ax, facecolor='none', edgecolor='black', linewidth=0.8, zorder=1)
+        else:
+            print(f"  Warning: Coastline shapefile not found at {COASTLINE_PATH}")
+    except ImportError:
+        print("  Warning: geopandas not installed. Skipping coastline.")
+    except Exception as e:
+        print(f"  Warning: Could not load coastline: {e}")
     
     coords = stations_df[['lon', 'lat']].to_numpy()
     clusters = lisa_result['clusters']
@@ -406,7 +441,8 @@ def plot_lisa_map(stations_df, lisa_result, model_name, condition, output_dir):
                 label=f"{labels[cluster_type]} ({np.sum(mask)})",
                 edgecolor='k',
                 linewidth=0.5,
-                alpha=0.8
+                alpha=0.8,
+                zorder=10
             )
     
     ax.set_xlabel('Longitude', fontsize=12)
@@ -414,14 +450,14 @@ def plot_lisa_map(stations_df, lisa_result, model_name, condition, output_dir):
     ax.set_title(f"LISA Cluster Map\n{model_name} - {condition}", fontsize=14)
     ax.legend(loc='lower right', fontsize=10)
     
-    # Add Hawaii island outlines (approximate bounding boxes)
+    # Set Hawaii bounds
     ax.set_xlim(-160.5, -154.5)
     ax.set_ylim(18.8, 22.5)
     
     plt.tight_layout()
     
     os.makedirs(output_dir, exist_ok=True)
-    plot_path = os.path.join(output_dir, f'lisa_map_{model_name}_{condition.replace("-", "_")}.png')
+    plot_path = os.path.join(output_dir, f'lisa_map_{model_name}_{condition.replace("-", "_")}.jpg')
     plt.savefig(plot_path, dpi=150, bbox_inches='tight')
     plt.close()
     print(f"  Saved: {plot_path}")

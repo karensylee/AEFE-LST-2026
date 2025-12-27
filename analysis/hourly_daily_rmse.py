@@ -5,7 +5,7 @@ This module generates publication-ready comparison figures:
 1. Hourly Box Plot: Paired box plots comparing BLAM and BLM by local hour (HST)
 2. Daily Line Plot: RMSE comparison over each day of year 2024
 
-Author: Generated for LST Analysis
+Author: Generated for LST Analysis. #Left as is. It is true.
 """
 
 import os
@@ -20,22 +20,18 @@ from datetime import timedelta
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config import settings
 
-# Matplotlib configuration for publication-quality figures
+# Matplotlib configuration (matching density_plots.py template)
 plt.rcParams.update({
-    'font.family': 'sans-serif',
-    'font.sans-serif': ['DejaVu Sans', 'Arial', 'Helvetica'],
-    'font.size': 16,
-    'axes.labelsize': 16,
-    'axes.titlesize': 18,
-    'axes.titleweight': 'bold',
-    'xtick.labelsize': 12,
-    'ytick.labelsize': 12,
-    'legend.fontsize': 12,
+    'font.family': 'serif',
+    'font.serif': ['Times New Roman', 'DejaVu Serif'],
+    'font.size': 25,
+    'axes.linewidth': 1.0,
+    'xtick.direction': 'in',
+    'ytick.direction': 'in',
     'figure.dpi': 100,
     'savefig.dpi': 300,
     'savefig.bbox': 'tight'
 })
-
 # Model colors
 MODEL_COLORS = {
     'BLAM': 'steelblue',
@@ -118,9 +114,8 @@ def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     ]).sort('hour_hst')
     obs_per_hour = hourly_counts['count'].to_list()
     
-    # Create figure with extra space for table
-    fig, (ax, ax_table) = plt.subplots(2, 1, figsize=(18, 10), 
-                                        gridspec_kw={'height_ratios': [4, 1]})
+    # Create figure
+    fig, ax = plt.subplots(figsize=(18, 8))
     
     # Box plot positions
     width = 0.35
@@ -161,46 +156,30 @@ def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     
     # Create secondary y-axis for cloud percentage
     ax2 = ax.twinx()
-    ax2.plot(hours, cloud_pct, 'g--s', linewidth=2, markersize=5, label='Cloud %', alpha=0.8, zorder=10)
-    ax2.set_ylabel('Cloud Percentage (%)', color='green')
-    ax2.tick_params(axis='y', labelcolor='green')
+    ax2.plot(hours, cloud_pct, color='#505050', linestyle='--', marker='s', linewidth=2, markersize=5, label='Cloud %', alpha=0.8, zorder=10)
+    ax2.set_ylabel('Cloud Percentage (%)', color='#404040')
+    ax2.tick_params(axis='y', labelcolor='#404040')
     ax2.set_ylim(0, 100)
     
-    # Labels and title
+    # Labels
     ax.set_xlabel('Local Hour (HST)')
     ax.set_ylabel('RMSE (K)')
-    ax.set_title('BLAM vs BLM: Hourly RMSE Distribution (2024)', fontweight='bold')
     ax.set_xticks(hours)
     ax.set_xticklabels([f'{h:02d}' for h in hours])
     ax.grid(axis='y', alpha=0.3)
     
-    # Set y-axis to start at 0
+    # Set y-axis to start at 0 and tighten x-axis
     ax.set_ylim(bottom=0)
+    ax.set_xlim(-0.5, 23.5)
     
     # Create legend handles
     from matplotlib.patches import Patch
     legend_elements = [
         Patch(facecolor=MODEL_COLORS['BLAM'], alpha=0.7, label='BLAM'),
         Patch(facecolor=MODEL_COLORS['BLM'], alpha=0.7, label='BLM'),
-        plt.Line2D([0], [0], color='green', linestyle='--', marker='s', label='Cloud %')
+        plt.Line2D([0], [0], color='#505050', linestyle='--', marker='s', label='Cloud %')
     ]
-    ax.legend(handles=legend_elements, loc='upper right')
-    
-    # Create table showing observation counts per hour
-    ax_table.axis('off')
-    table_data = [[f'{n:,}' for n in obs_per_hour]]
-    col_labels = [f'{h:02d}' for h in hours]
-    table = ax_table.table(
-        cellText=table_data,
-        colLabels=col_labels,
-        rowLabels=['n (5-min obs)'],
-        loc='center',
-        cellLoc='center'
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1.0, 1.5)
-    ax_table.set_title('Number of 5-minute observations per hour', fontsize=12, pad=10)
+    ax.legend(handles=legend_elements, loc='upper right', framealpha=1.0, facecolor='white', edgecolor='gray')
     
     plt.tight_layout()
     
@@ -249,9 +228,8 @@ def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     ]).sort('date_hst')
     obs_per_day = daily_counts['count'].to_list()
     
-    # Create figure with extra space for table
-    fig, (ax, ax_table) = plt.subplots(2, 1, figsize=(16, 9), 
-                                        gridspec_kw={'height_ratios': [4, 1]})
+    # Create figure
+    fig, ax = plt.subplots(figsize=(16, 8))
     
     # Plot RMSE lines for both models
     ax.plot(dates_blam_dt, rmse_blam, color=MODEL_COLORS['BLAM'], linewidth=1.5, alpha=0.8, label='BLAM')
@@ -268,71 +246,57 @@ def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
         ax.plot(rolling_dates, rolling_blm, color='darkred', linewidth=2.5, 
                 label=f'BLM {window_size}-Day Avg', linestyle='-')
     
-    # Create secondary y-axis for cloud percentage
+    # Create secondary y-axis for cloud percentage (render behind main plot elements)
     ax2 = ax.twinx()
-    ax2.fill_between(dates_blam_dt, 0, cloud_pct, color='gray', alpha=0.2, label='Cloud %')
-    ax2.set_ylabel('Cloud Percentage (%)', color='gray')
-    ax2.tick_params(axis='y', labelcolor='gray')
+    ax2.set_zorder(ax.get_zorder() - 1)  # Put ax2 behind ax
+    ax.patch.set_visible(False)  # Make ax background transparent so ax2 shows through
+    ax2.fill_between(dates_blam_dt, 0, cloud_pct, color='gray', alpha=0.2, label='Cloud %', zorder=0)
+    ax2.set_ylabel('Cloud Percentage (%)', color='#404040')
+    ax2.tick_params(axis='y', labelcolor='#404040')
     ax2.set_ylim(0, 100)
     
-    # Format x-axis with month labels
+    # Format x-axis with month labels (just month names)
     ax.xaxis.set_major_locator(mdates.MonthLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
     ax.xaxis.set_minor_locator(mdates.DayLocator(interval=7))
+    ax.tick_params(axis='x', labelsize=16)  # Reduce x-axis label size to prevent overlap
     
-    # Labels and title
-    ax.set_xlabel('Date (2024)')
-    ax.set_ylabel('RMSE (K)')
-    ax.set_title('BLAM vs BLM: Daily RMSE Throughout 2024 (HST)', fontweight='bold')
+    # Labels
+    ax.set_xlabel('Month')
+    ax.set_ylabel('Mean RMSE (K)')
     ax.grid(axis='both', alpha=0.3)
     
-    # Set y-axis to start at 0
+    # Set y-axis to start at 0 and tighten x-axis, remove "0" label
     ax.set_ylim(bottom=0)
+    ax.set_xlim(dates_blam_dt[0], dates_blam_dt[-1])
+    # Remove the 0 from y-axis ticks
+    yticks = ax.get_yticks()
+    ax.set_yticks([t for t in yticks if t > 0])
     
-    # Combined legend
+    # Combined legend with pure white opaque background (top right, aligned with stats box)
     lines1, labels1 = ax.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax.legend(lines1 + lines2, labels1 + labels2, loc='upper right', ncol=2)
+    legend = ax.legend(lines1 + lines2, labels1 + labels2, loc='upper right', ncol=2, 
+              framealpha=1.0, facecolor='#ffffff', edgecolor='gray', fontsize=15,
+              bbox_to_anchor=(0.975, 0.975), borderaxespad=0)
+    legend.get_frame().set_facecolor('#ffffff')
+    legend.get_frame().set_alpha(1.0)
+    legend.set_zorder(100)  # Ensure legend is on top of everything
     
-    # Add statistics annotation
+    # Add statistics annotation (top left, aligned with legend top edge)
     mean_blam = np.mean(rmse_blam)
     mean_blm = np.mean(rmse_blm)
     mean_cloud = np.mean(cloud_pct)
-    ax.text(
-        0.02, 0.98, 
-        f'BLAM Mean: {mean_blam:.2f} K\nBLM Mean: {mean_blm:.2f} K\nCloud: {mean_cloud:.1f}%',
+    text_box = ax.text(
+        0.025, 0.975, 
+        f'BLAM Mean: {mean_blam:.2f} K\nBLM Mean: {mean_blm:.2f} K\nCloud %: {mean_cloud:.1f}',
         transform=ax.transAxes,
         verticalalignment='top',
-        fontsize=12,
-        bbox=dict(boxstyle='round', facecolor='white', alpha=0.9)
+        horizontalalignment='left',
+        fontsize=15,
+        bbox=dict(boxstyle='round,pad=0.5', facecolor='#ffffff', alpha=1.0, edgecolor='gray'),
+        zorder=100  # Ensure text box is on top of everything
     )
-    
-    # Create table showing monthly observation counts (summarized)
-    ax_table.axis('off')
-    
-    # Aggregate daily counts by month for a cleaner table
-    monthly_obs = df_blam.with_columns(
-        pl.col('datetime_hst').dt.strftime('%b').alias('month_name'),
-        pl.col('datetime_hst').dt.month().alias('month_num')
-    ).group_by(['month_num', 'month_name']).agg(
-        pl.len().alias('count')
-    ).sort('month_num')
-    
-    month_labels = monthly_obs['month_name'].to_list()
-    month_counts = monthly_obs['count'].to_list()
-    
-    table_data = [[f'{n:,}' for n in month_counts]]
-    table = ax_table.table(
-        cellText=table_data,
-        colLabels=month_labels,
-        rowLabels=['n (obs/month)'],
-        loc='center',
-        cellLoc='center'
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(11)
-    table.scale(1.0, 1.5)
-    ax_table.set_title('Number of observations per month', fontsize=12, pad=10)
     
     plt.tight_layout()
     
