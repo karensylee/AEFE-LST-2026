@@ -8,8 +8,8 @@ This project trains XGBoost models to predict land surface temperature (LST) by 
 
 - **Ground truth**: Hawaii Mesonet station temperature measurements (Tsrf_1_Avg)
 - **Satellite features**: GOES-18 MCMIPC Cloud Moisture Imagery bands (CMI_C01-C16)
-- **Embeddings**: AlphaEarth geospatial embeddings (64-dim)
-- **Auxiliary**: Elevation, cyclical time and solar position features (two components per feature: DOY, hour of day, SZA, SAA)
+- **Embeddings**: AlphaEarth geospatial embeddings (A00-A63)
+- **Auxiliary**: Elevation and cyclical time: Day of the Year (DOY_sin, DOY_cos), Hour of the day (HOUR_sin, HOUR_cos), Solar Zenith Angle (SZA_sin, SZA_cos), and Solar Azimuth Angle (SAA_sin, SAA_cos)
 
 ## Requirements
 
