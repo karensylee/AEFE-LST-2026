@@ -33,7 +33,7 @@ plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 
 # Define specific models and order for the grids
-GRID_MODELS = ['BLM', 'BLAM', 'CIM', 'CIAM']
+GRID_MODELS = ['BLM', 'BLAM', 'CIM', 'CIAM', 'TTM']
 
 # Model Title Mappings
 MODEL_TITLES = {
@@ -41,7 +41,8 @@ MODEL_TITLES = {
     'BLAM': r'BLAM' + '\n' + r'$\mathit{(BLM + AEFE)}$',
     'CIM': 'CIM',
     'CIAM': r'CIAM' + '\n' + r'$\mathit{(CIM + AEFE)}$',
-    'BLAM-C': r'BLAM-C' + '\n' + r'$\mathit{(BLM + AEFE - CIM)}$'
+    'BLAM-C': r'BLAM-C' + '\n' + r'$\mathit{(BLM + AEFE - CIM)}$',
+    'TTM': 'TTM'
 }
 
 def calculate_metrics(df, true_col='LST_true', pred_col='LST_pred'):
