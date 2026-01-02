@@ -17,6 +17,7 @@ def get_model_description(model_type):
         'BLAM-C': 'Baseline + AEFE - CMI (Auxiliary + 64 AEFE only)',
         'CIM': 'CMI-Only Model (16 CMI bands, no auxiliary)',
         'CIAM': 'CMI + AEFE Model (16 CMI + 64 AEFE, no auxiliary)',
+        'TTM': 'TopTenModel (Top 10 features)',
     }
     return descriptions.get(model_type, 'Unknown Model')
 

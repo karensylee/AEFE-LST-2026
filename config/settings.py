@@ -45,6 +45,10 @@ FEATURE_SETS = {
     'BLAM-C': AUXILIARY_FEATURES + EMBEDDINGS,                                   # Baseline + AEFE - CMI (Embeddings + Auxiliary)
     'CIM': CMI_BANDS,                                       # CMI Only
     'CIAM': CMI_BANDS + EMBEDDINGS,                         # CMI + AEFE
+    'TTM': [
+        'CMI_C08', 'CMI_C16', 'CMI_C09', 'CMI_C01', 'A25', 
+        'CMI_C03', 'CMI_C11', 'SZA_cos', 'A05', 'A55'
+    ],
 }
 
 # Scaling Configuration
