@@ -130,6 +130,7 @@ def print_final_summary(all_results, model_type, total_time):
 def main():
     parser = argparse.ArgumentParser(description="Train LST XGBoost Models")
     parser.add_argument('--model_type', type=str, required=True, choices=settings.FEATURE_SETS.keys(), help="Feature set to use")
+    parser.add_argument('--best_params', type=str, help="Path to JSON file containing best parameters (skips tuning)")
     args = parser.parse_args()
 
     total_start_time = time.time()
@@ -199,9 +200,18 @@ def main():
     X_tune = tuning_df[features].to_numpy()
     y_tune = tuning_df[settings.TARGET_COL].to_numpy()
     
-    best_params = trainer.tune_hyperparameters(X_tune, y_tune)
+    y_tune = tuning_df[settings.TARGET_COL].to_numpy()
     
-    print(f"\n✓ Optuna Tuning Complete")
+    if args.best_params and os.path.exists(args.best_params):
+        print(f"\n--- Loading Custom Parameters (Skipping Tuning) ---")
+        import json
+        with open(args.best_params, 'r') as f:
+            best_params = json.load(f)
+        print(f"✓ Loaded parameters from: {args.best_params}")
+    else:
+        best_params = trainer.tune_hyperparameters(X_tune, y_tune)
+    
+    print(f"\n✓ Optuna Tuning Complete (or Loaded)")
     print(f"    - Best Parameters:")
     for key, value in best_params.items():
         print(f"        {key}: {value}")
