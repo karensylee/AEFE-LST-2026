@@ -18,6 +18,7 @@ def get_model_description(model_type):
         'CIM': 'CMI-Only Model (16 CMI bands, no auxiliary)',
         'CIAM': 'CMI + AEFE Model (16 CMI + 64 AEFE, no auxiliary)',
         'TTM': 'TopTenModel (Top 10 features)',
+        'BLAM-ALL': 'Full BLAM Model (Trained on ALL data, no CV)',
     }
     return descriptions.get(model_type, 'Unknown Model')
 
@@ -205,8 +206,53 @@ def main():
     for key, value in best_params.items():
         print(f"        {key}: {value}")
 
-    # --- LOSO Loop ---
-    print("\n--- Starting Leave-One-Station-Out (LOSO) Cross-Validation ---")
+    # --- Training Execution Path ---
+    if args.model_type.endswith('-ALL'):
+        # === FULL DATASET TRAINING (No Cross-Validation) ===
+        print(f"\n--- Starting Full Dataset Training (No CV) ---")
+        print(f"Model Type: {args.model_type}")
+        print(f"Training Data Size: {len(df):,} rows")
+        
+        # Train on EVERYTHING
+        X_all = df[features].to_numpy()
+        y_all = df[settings.TARGET_COL].to_numpy()
+        
+        print(f"Training final model on all available data...")
+        model = trainer.train_final_model(X_all, y_all, best_params)
+        
+        # Save Final Model
+        model_path = os.path.join(model_output_dir, f"{args.model_type}_model.joblib")
+        joblib.dump(model, model_path)
+        print(f"✓ Final model saved to: {model_path}")
+        
+        # Save Global Scaler
+        scaler_path = os.path.join(model_output_dir, f"{args.model_type}_scaler.joblib")
+        joblib.dump(global_scaler, scaler_path)
+        print(f"✓ Global scaler saved to: {scaler_path}")
+        
+        # Calculate Training Metrics (Optional but good for sanity check)
+        print("\nCalculating Training Metrics (Self-Prediction)...")
+        preds = model.predict(X_all)
+        cloud_mask = df['ACMC_BCM'].to_numpy()
+        
+        metrics = evaluation.calculate_metrics(y_all, preds, cloud_mask)
+        print(f"    - Overall Training R²={metrics['r2_overall']:.4f}, RMSE={metrics['rmse_overall']:.4f} K")
+        
+        # Save Training Predictions 
+        pred_file = os.path.join(temp_pred_dir, f"preds_{args.model_type}_TRAIN.csv")
+        output_df = pd.DataFrame({
+            'LST_true': y_all,
+            'LST_pred': preds,
+            'station_id': df['SITE_ID'],
+            'LOCAL_TIME': df['LOCAL_TIME'].values if 'LOCAL_TIME' in df else None,
+            'ACMC_BCM': cloud_mask
+        })
+        output_df.to_csv(pred_file, index=False)
+        print(f"✓ Training predictions saved to: {pred_file}")
+
+    else:
+        # === LEAVE-ONE-STATION-OUT (LOSO) CV ===
+        print("\n--- Starting Leave-One-Station-Out (LOSO) Cross-Validation ---")
     stations = sorted(df['SITE_ID'].unique())
     print(f"Total Stations: {len(stations)}")
     

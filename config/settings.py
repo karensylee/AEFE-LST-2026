@@ -49,6 +49,7 @@ FEATURE_SETS = {
         'CMI_C08', 'CMI_C16', 'CMI_C09', 'CMI_C01', 'A25', 
         'CMI_C03', 'CMI_C11', 'SZA_cos', 'A05', 'A55'
     ],
+    'BLAM-ALL': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)] + EMBEDDINGS, # Full data training
 }
 
 # Scaling Configuration
