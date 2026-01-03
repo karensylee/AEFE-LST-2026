@@ -154,6 +154,7 @@ def plot_individual_metrics(models_data, output_dir):
         
         plt.tight_layout()
         fig.savefig(os.path.join(fig_dir, f'paired_dot_{metric}.jpg'), dpi=150, bbox_inches='tight')
+        plt.show()
         plt.close()
         print(f"Saved: paired_dot_{metric}.jpg")
 

@@ -176,6 +176,7 @@ def plot_individual_model_conditions(models_data, output_dir):
             
             filename = f"{model_name}_{cond_name.replace('-', '_').lower()}.jpg"
             plt.savefig(os.path.join(save_dir, filename), dpi=300, bbox_inches='tight')
+            plt.show()
             plt.close(fig)
 
 # --- Function 2: Standard Grid (2x4) ---
@@ -226,6 +227,7 @@ def plot_standard_grid(models_data, output_dir):
 
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'density_grid_standard.jpg'), dpi=300, bbox_inches='tight')
+    plt.show()
     plt.close(fig)
 
 # --- Function 3: Compact Grid (Publication Ready) 2x4 ---
