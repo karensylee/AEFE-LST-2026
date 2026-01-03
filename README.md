@@ -174,6 +174,8 @@ The project includes comprehensive analysis scripts for evaluating model perform
 | `analysis/morans_i.py` | Moran's I spatial autocorrelation analysis | `figures/morans_i/` |
 | `analysis/paired_dot_plots.py` | Paired dot (slope) plots for model comparisons | `figures/statistical_tests/` |
 | `analysis/statistical_analysis.py` | Core statistical functions and metrics export | `figures/statistical_tests/` |
+| `analysis/dendrogram_clustermap.py` | Feature correlation clustering analysis | `models/xgb/BLAM/shap_analysis/` |
+| `analysis/xgb_native_shap.py` | Per-station SHAP analysis (GPU optimized) | `models/xgb/{MODEL}/shap_analysis/` |
 
 ---
 
@@ -321,11 +323,52 @@ Core statistical module for computing and exporting model metrics:
 
 ---
 
-## Data Aggregation
+### Dendrogram Clustermap (Feature Correlation)
 
-The `src/` directory includes temporal aggregation utilities:
+```bash
+python analysis/dendrogram_clustermap.py
+```
 
-### 5-Minute to Hourly/Daily/Monthly Aggregation
+Performs hierarchical clustering on feature correlations:
+
+- **Correlation matrix**: Computes pairwise correlations between all features (CMI, AEFE, Auxiliary)
+- **Clustermap visualization**: Seaborn clustermap with dendrograms showing feature groupings
+- **High-correlation detection**: Identifies feature pairs with |r| > 0.8
+
+**Output**: `models/xgb/BLAM/shap_analysis/`
+
+- `feature_correlation_matrix.csv`
+- `correlation_clustermap.jpg`
+
+---
+
+### XGBoost Native SHAP Analysis
+
+```bash
+python analysis/xgb_native_shap.py --model_type BLAM
+```
+
+Computes per-station SHAP feature importance using XGBoost's native TreeSHAP:
+
+- **GPU optimized**: Uses GPU-accelerated SHAP with automatic CPU fallback
+- **Checkpointing**: Saves progress every 2 stations for resume capability
+- **All model types**: Supports `--model_type BLAM|BLM|BLAM-C|CIM|CIAM`
+
+> [!NOTE]
+> Requires saved model files (`*.joblib`) from training. These are large files not tracked in git.
+
+**Output**: `models/xgb/{MODEL}/shap_analysis/`
+
+- `shap_checkpoint.csv` (incremental)
+- `station_shap_importance_final.csv`
+
+---
+<!-- currently deprecated -->
+<!-- ## Data Aggregation
+
+The `src/` directory includes temporal aggregation utilities: -->
+
+<!-- ### 5-Minute to Hourly/Daily/Monthly Aggregation
 
 ```bash
 python -m src.aggregate_5min_to_hourly_daily_monthly
@@ -337,7 +380,7 @@ Converts 5-minute observations to aggregated time scales with quality control th
 |-------------|--------------|
 | **Hourly** | ≥10 of 12 possible 5-min observations |
 | **Daily** | ≥22 of 24 possible hourly observations |
-| **Monthly** | 100% daily completeness required |
+| **Monthly** | 100% daily completeness required | -->
 
 ---
 
@@ -365,6 +408,8 @@ lst/
 │   ├── morans_i.py              # Spatial autocorrelation analysis
 │   ├── paired_dot_plots.py      # Statistical visualization
 │   ├── statistical_analysis.py  # Core statistical functions
+│   ├── dendrogram_clustermap.py # Feature correlation clustering
+│   ├── xgb_native_shap.py       # Per-station SHAP analysis (GPU)
 │   ├── inspect_goes18.py        # GOES-18 data inspection
 │   └── inspect_goes18_acmc.py   # ACMC cloud mask inspection
 ├── notebooks/
