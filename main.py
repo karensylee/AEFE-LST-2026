@@ -164,6 +164,7 @@ def main():
     print(f"    - Memory Usage: {df.memory_usage(deep=True).sum() / 1e6:.2f} MB")
     
     # --- Scale Data Globally ---
+    # --- Scale Data Globally ---
     print("\n--- Scaling Features ---")
     df, global_scaler = data_loader.scale_features(df)
     print(f"✓ Features scaled globally")
@@ -200,8 +201,6 @@ def main():
     X_tune = tuning_df[features].to_numpy()
     y_tune = tuning_df[settings.TARGET_COL].to_numpy()
     
-    y_tune = tuning_df[settings.TARGET_COL].to_numpy()
-    
     if args.best_params and os.path.exists(args.best_params):
         print(f"\n--- Loading Custom Parameters (Skipping Tuning) ---")
         import json
@@ -217,17 +216,29 @@ def main():
         print(f"        {key}: {value}")
 
     # --- Training Execution Path ---
-    if args.model_type.endswith('-ALL'):
+    if args.model_type.startswith('BLAM-ALL'):
         # === FULL DATASET TRAINING (No Cross-Validation) ===
         print(f"\n--- Starting Full Dataset Training (No CV) ---")
         print(f"Model Type: {args.model_type}")
-        print(f"Training Data Size: {len(df):,} rows")
         
-        # Train on EVERYTHING
-        X_all = df[features].to_numpy()
-        y_all = df[settings.TARGET_COL].to_numpy()
+        # Filter Data based on Model Type Variant
+        if 'CLEAR' in args.model_type:
+            print("Filtering for CLEAR SKY only (ACMC_BCM = 0)")
+            train_df = df[df['ACMC_BCM'] == 0]
+        elif 'CLOUDY' in args.model_type:
+            print("Filtering for CLOUDY SKY only (ACMC_BCM = 1)")
+            train_df = df[df['ACMC_BCM'] == 1]
+        else:
+            print("Using ALL Sky Conditions")
+            train_df = df
+            
+        print(f"Training Data Size: {len(train_df):,} rows")
         
-        print(f"Training final model on all available data...")
+        # Train on Selected Data
+        X_all = train_df[features].to_numpy()
+        y_all = train_df[settings.TARGET_COL].to_numpy()
+        
+        print(f"Training final model on available data...")
         model = trainer.train_final_model(X_all, y_all, best_params)
         
         # Save Final Model
@@ -235,10 +246,13 @@ def main():
         joblib.dump(model, model_path)
         print(f"✓ Final model saved to: {model_path}")
         
-        # Save Global Scaler
-        scaler_path = os.path.join(model_output_dir, f"{args.model_type}_scaler.joblib")
-        joblib.dump(global_scaler, scaler_path)
-        print(f"✓ Global scaler saved to: {scaler_path}")
+        # Save Global Scaler (Only if it exists)
+        if global_scaler is not None:
+            scaler_path = os.path.join(model_output_dir, f"{args.model_type}_scaler.joblib")
+            joblib.dump(global_scaler, scaler_path)
+            print(f"✓ Global scaler saved to: {scaler_path}")
+        else:
+             print(f"✓ No scaler used/saved for {args.model_type}")
         
         # Calculate Training Metrics (Optional but good for sanity check)
         print("\nCalculating Training Metrics (Self-Prediction)...")

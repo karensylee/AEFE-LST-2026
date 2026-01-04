@@ -50,6 +50,8 @@ FEATURE_SETS = {
         'CMI_C03', 'CMI_C11', 'SZA_cos', 'A05', 'A55'
     ],
     'BLAM-ALL': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)] + EMBEDDINGS, # Full data training
+    'BLAM-ALL-CLEAR': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)] + EMBEDDINGS, # Full data clear sky
+    'BLAM-ALL-CLOUDY': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)] + EMBEDDINGS, # Full data cloudy sky
 }
 
 # Scaling Configuration
