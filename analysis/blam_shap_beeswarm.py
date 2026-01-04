@@ -9,6 +9,7 @@ Uses 10,000 samples per model variant.
 """
 
 import os
+import argparse
 import sys
 import gc
 import numpy as np
@@ -178,17 +179,34 @@ def plot_beeswarm(shap_values, X_df, title, filename, max_display=20):
 # MAIN EXECUTION
 # ==============================================================================
 def main():
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Compute TreeSHAP values and generate beeswarm plots for BLAM-ALL variants."
+    )
+    parser.add_argument(
+        '--models', 
+        nargs='+',
+        choices=list(VARIANTS.keys()),
+        default=list(VARIANTS.keys()),
+        help=f"Model variants to analyze. Choices: {list(VARIANTS.keys())}. Default: all three."
+    )
+    args = parser.parse_args()
+    
     print("=" * 60)
     print("BLAM-ALL TreeSHAP Analysis")
     print("=" * 60)
     print(f"Output Directory: {OUTPUT_DIR}")
     print(f"Samples per model: {SAMPLES:,}")
+    print(f"Models to analyze: {args.models}")
     
     # Get LazyFrame (memory efficient - doesn't load all data)
     q_all, features = get_lazy_frame()
     print(f"Features: {len(features)}")
     
-    for variant_key, config in VARIANTS.items():
+    # Filter variants based on command-line args
+    selected_variants = {k: v for k, v in VARIANTS.items() if k in args.models}
+    
+    for variant_key, config in selected_variants.items():
         print(f"\n{'=' * 50}")
         print(f"Processing: {variant_key} ({config['name']})")
         print("=" * 50)
