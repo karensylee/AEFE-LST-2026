@@ -257,7 +257,7 @@ def main():
         # Calculate Training Metrics (Optional but good for sanity check)
         print("\nCalculating Training Metrics (Self-Prediction)...")
         preds = model.predict(X_all)
-        cloud_mask = df['ACMC_BCM'].to_numpy()
+        cloud_mask = train_df['ACMC_BCM'].to_numpy()
         
         metrics = evaluation.calculate_metrics(y_all, preds, cloud_mask)
         print(f"    - Overall Training R²={metrics['r2_overall']:.4f}, RMSE={metrics['rmse_overall']:.4f} K")

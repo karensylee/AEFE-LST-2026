@@ -244,7 +244,10 @@ def main():
         print(f"  Sampling {n:,} from {count:,} available observations...")
         
         try:
-            df_sample = q_variant.sample(n, seed=RANDOM_STATE).collect()
+            # Collect full data then sample (LazyFrame doesn't support sample directly)
+            df_full = q_variant.collect()
+            df_sample = df_full.sample(n, seed=RANDOM_STATE)
+            del df_full  # Free memory
         except Exception as e:
             print(f"  Sampling failed: {e}")
             continue
