@@ -117,7 +117,7 @@ def plot_2x4_compact_panel(models_data, output_dir):
             label_idx += 1
     
     out_path = os.path.join(fig_dir, 'paired_dot_2x4_compact.jpg')
-    plt.savefig(out_path, dpi=300, bbox_inches='tight')
+    plt.savefig(out_path, dpi=600, bbox_inches='tight')
     plt.show()
     plt.close(fig)
     print(f"Saved: {out_path}")

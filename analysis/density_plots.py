@@ -33,15 +33,15 @@ plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 
 # Define specific models and order for the grids
-GRID_MODELS = ['B-E', 'B', 'B-E-X', 'B-X', 'TTM']
+GRID_MODELS = ['B', 'B-E', 'B-X', 'B-E-X', 'TTM']
 
 # Model Title Mappings
 MODEL_TITLES = {
     'B-E': 'B-E',
-    'B': r'B' + '\n' + r'$\mathit{(B-E)}$',
+    'B': 'B',
     'B-E-X': 'B-E-X',
-    'B-X': r'B-X' + '\n' + r'$\mathit{(B-E-X)}$',
-    'B-C': r'B-C' + '\n' + r'$\mathit{(B-E)}$',
+    'B-X': 'B-X',
+    'B-C': 'B-C',
     'TTM': 'TTM'
 }
 
@@ -56,7 +56,7 @@ def calculate_metrics(df, true_col='LST_true', pred_col='LST_pred'):
     metrics = {
         'rmse': np.sqrt(mean_squared_error(y_true, y_pred)),
         'r2': r2_score(y_true, y_pred),
-        'bias': np.median(error),
+        'bias': np.mean(error),
         'mean': np.mean(y_true), 
         'error_std': np.std(error),
         'n': df.height
@@ -104,7 +104,7 @@ def add_stats_text(ax, metrics, fontsize=20, loc='lower right'):
     stats_text = (
         f"$R^2$ = {metrics['r2']:.2f}\n"
         f"RMSE = {metrics['rmse']:.2f}\n"
-        f"Bias = {metrics['bias']:.2f}\n"
+        f"Mean Bias = {metrics['bias']:.2f}\n"
         f"STD = {metrics['error_std']:.2f}"
     )
     
@@ -342,15 +342,15 @@ def plot_2x4_compact_publication(models_data, output_dir):
 def plot_2x2_allsky_compact(models_data, output_dir):
     """
     2 rows x 2 cols All-Sky grid with shared colorbar.
-    Top row: B-E, B
-    Bottom row: B-E-X, B-X
+    Top row: B, B-E
+    Bottom row: B-X, B-E-X
     """
     print("Generating 2x2 All-Sky compact grid...")
     
     # Define layout: rows × cols
     model_grid = [
-        ['B-E', 'B'],
-        ['B-E-X', 'B-X']
+        ['B', 'B-E'],
+        ['B-X', 'B-E-X']
     ]
     
     # Check all models are available
@@ -559,8 +559,12 @@ def main():
         print("No model data found.")
         return
         
-    plot_individual_model_conditions(models_data, output_dir)
-    plot_standard_grid(models_data, output_dir)
+    # Individual plots and standard grid skipped for faster execution
+    # Uncomment if needed:
+    # plot_individual_model_conditions(models_data, output_dir)
+    # plot_standard_grid(models_data, output_dir)
+    
+    # Generate compact grids only
     plot_2x4_compact_publication(models_data, output_dir)
     plot_2x2_allsky_compact(models_data, output_dir)
     plot_blam_c_2x1_compact(models_data, output_dir)
