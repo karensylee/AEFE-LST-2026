@@ -3,7 +3,7 @@ Paired Dot Plot Visualizations for LST Model Comparisons
 
 Generates 2x4 compact panel of paired dot plots matching density_plots.py style.
 Rows: Clear-Sky, Cloudy-Sky
-Cols: BLM vs BLAM (RMSE), BLM vs BLAM (STD), CIM vs CIAM (RMSE), CIM vs CIAM (STD)
+Cols: B-E vs B (RMSE), B-E vs B (STD), B-E-X vs B-X (RMSE), B-E-X vs B-X (STD)
 """
 
 import os
@@ -66,7 +66,7 @@ def plot_2x4_compact_panel(models_data, output_dir):
     """
     Generate 2x4 compact panel of paired dot plots.
     Rows: Clear-Sky, Cloudy-Sky
-    Cols: BLM vs BLAM (RMSE), BLM vs BLAM (STD), CIM vs CIAM (RMSE), CIM vs CIAM (STD)
+    Cols: B-E vs B (RMSE), B-E vs B (STD), B-E-X vs B-X (RMSE), B-E-X vs B-X (STD)
     """
     print("Generating 2x4 compact paired dot panel...")
     
@@ -74,12 +74,12 @@ def plot_2x4_compact_panel(models_data, output_dir):
     os.makedirs(fig_dir, exist_ok=True)
     
     # Layout: 2 rows (conditions) x 4 cols (comparison+metric combos)
-    # Cols: (BLM,BLAM,rmse), (BLM,BLAM,std), (CIM,CIAM,rmse), (CIM,CIAM,std)
+    # Cols: (B-E,B,rmse), (B-E,B,std), (B-E-X,B-X,rmse), (B-E-X,B-X,std)
     column_configs = [
-        (COMPARISONS[0], 'rmse'),  # BLM vs BLAM RMSE
-        (COMPARISONS[0], 'std'),   # BLM vs BLAM STD
-        (COMPARISONS[1], 'rmse'),  # CIM vs CIAM RMSE
-        (COMPARISONS[1], 'std'),   # CIM vs CIAM STD
+        (COMPARISONS[0], 'rmse'),  # B-E vs B RMSE
+        (COMPARISONS[0], 'std'),   # B-E vs B STD
+        (COMPARISONS[1], 'rmse'),  # B-E-X vs B-X RMSE
+        (COMPARISONS[1], 'std'),   # B-E-X vs B-X STD
     ]
     
     fig, axes = plt.subplots(2, 4, figsize=(26, 14))

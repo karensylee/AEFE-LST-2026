@@ -6,7 +6,7 @@ This script computes SHAP values per station using XGBoost's native TreeSHAP
 implementation. Optimized for A100 GPU with safe batching and CPU fallback.
 
 Usage:
-    python analysis/xgb_native_shap.py --model_type BLAM
+    python analysis/xgb_native_shap.py --model_type B
 """
 
 import os
@@ -68,11 +68,11 @@ AUXILIARY_FEATURES = [
 
 # Feature Sets (matching config/settings.py)
 FEATURE_SETS = {
-    'BLM': AUXILIARY_FEATURES + CMI_FEATURES,
-    'BLAM': AUXILIARY_FEATURES + CMI_FEATURES + AEFE_FEATURES,
-    'BLAM-C': AUXILIARY_FEATURES + AEFE_FEATURES,
-    'CIM': CMI_FEATURES,
-    'CIAM': CMI_FEATURES + AEFE_FEATURES,
+    'B-E': AUXILIARY_FEATURES + CMI_FEATURES,
+    'B': AUXILIARY_FEATURES + CMI_FEATURES + AEFE_FEATURES,
+    'B-C': AUXILIARY_FEATURES + AEFE_FEATURES,
+    'B-E-X': CMI_FEATURES,
+    'B-X': CMI_FEATURES + AEFE_FEATURES,
 }
 
 # Scaling columns (CMI bands + Elevation)
@@ -185,9 +185,9 @@ def get_scale_col_indices(feature_set, scaling_cols):
 # ==============================================================================
 def main():
     parser = argparse.ArgumentParser(description="XGBoost Native SHAP Analysis")
-    parser.add_argument('--model_type', type=str, default='BLAM', 
+    parser.add_argument('--model_type', type=str, default='B', 
                         choices=list(FEATURE_SETS.keys()),
-                        help="Model type to analyze (default: BLAM)")
+                        help="Model type to analyze (default: B)")
     args = parser.parse_args()
     
     model_type = args.model_type

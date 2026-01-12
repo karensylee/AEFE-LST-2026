@@ -18,7 +18,7 @@ from config import settings
 
 METRICS = ['rmse', 'std']
 CONDITIONS = [('Clear-Sky', 0), ('Cloudy-Sky', 1)]
-COMPARISONS = [('BLM', 'BLAM'), ('CIM', 'CIAM')]
+COMPARISONS = [('B-E', 'B'), ('B-E-X', 'B-X')]
 
 
 def load_data(models=None):

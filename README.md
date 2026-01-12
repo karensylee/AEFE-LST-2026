@@ -92,19 +92,19 @@ Merges ground + satellite data, performs feature engineering:
 ### Step 5: Train Models
 
 ```bash
-python main.py --model_type BLM
-python main.py --model_type BLAM
-python main.py --model_type BLAM-C
-python main.py --model_type CIM
-python main.py --model_type CIAM
+python main.py --model_type B-E
+python main.py --model_type B
+python main.py --model_type B-C
+python main.py --model_type B-E-X
+python main.py --model_type B-X
 ```
 
 ```bash
-python main.py --model_type BLM && \
-python main.py --model_type BLAM && \
-python main.py --model_type BLAM-C && \
-python main.py --model_type CIM && \
-python main.py --model_type CIAM
+python main.py --model_type B-E && \
+python main.py --model_type B && \
+python main.py --model_type B-C && \
+python main.py --model_type B-E-X && \
+python main.py --model_type B-X
 ```
 
 Optuna hyperparameter tuning (100 trials) runs automatically for each model.
@@ -113,11 +113,11 @@ Optuna hyperparameter tuning (100 trials) runs automatically for each model.
 
 | Model | Description | Components |
 |-------|-------------|------------|
-| **BLM** | Baseline Model | CMI Bands + Auxiliary |
-| **BLAM** | Baseline + AlphaEarth | CMI Bands + Auxiliary + Embeddings |
-| **BLAM-C** | Context Only | Auxiliary + Embeddings (No CMI) |
-| **CIM** | Satellite Only | CMI Bands (No Auxiliary, No Embeddings) |
-| **CIAM** | Satellite + AlphaEarth | CMI Bands + Embeddings (No Auxiliary) |
+| **B-E** | Baseline Model | CMI Bands + Auxiliary |
+| **B** | Baseline + AlphaEarth | CMI Bands + Auxiliary + Embeddings |
+| **B-C** | Context Only | Auxiliary + Embeddings (No CMI) |
+| **B-E-X** | Satellite Only | CMI Bands (No Auxiliary, No Embeddings) |
+| **B-X** | Satellite + AlphaEarth | CMI Bands + Embeddings (No Auxiliary) |
 
 ### Feature Details
 
@@ -169,12 +169,12 @@ The project includes comprehensive analysis scripts for evaluating model perform
 | `analysis/density_plots.py` | Density scatter plots (True vs Predicted LST) | `figures/density_plots/` |
 | `analysis/heatmap_plots.py` | Station-level error metric heatmaps | `figures/heatmaps/` |
 | `analysis/gantt_chart.py` | Temporal data availability visualization | `figures/analysis/` |
-| `analysis/cloud_by_station.py` | Cloud percentage and BLAM vs BLM metrics by station | `figures/cloud_analysis/` |
+| `analysis/cloud_by_station.py` | Cloud percentage and B vs B-E metrics by station | `figures/cloud_analysis/` |
 | `analysis/hourly_daily_rmse.py` | Hourly and daily RMSE temporal analysis | `figures/rmse_temporal/` |
 | `analysis/morans_i.py` | Moran's I spatial autocorrelation analysis | `figures/morans_i/` |
 | `analysis/paired_dot_plots.py` | Paired dot (slope) plots for model comparisons | `figures/statistical_tests/` |
 | `analysis/statistical_analysis.py` | Core statistical functions and metrics export | `figures/statistical_tests/` |
-| `analysis/dendrogram_clustermap.py` | Feature correlation clustering analysis | `models/xgb/BLAM/shap_analysis/` |
+| `analysis/dendrogram_clustermap.py` | Feature correlation clustering analysis | `models/xgb/B/shap_analysis/` |
 | `analysis/xgb_native_shap.py` | Per-station SHAP analysis (GPU optimized) | `models/xgb/{MODEL}/shap_analysis/` |
 
 ---
@@ -188,9 +188,9 @@ python analysis/density_plots.py
 Generates density scatter plots comparing True vs Predicted LST:
 
 - **Individual plots**: Clear-Sky, Cloudy-Sky, and All-Sky per model
-- **2x4 Compact Grid**: Rows (Clear-Sky, Cloudy-Sky) × Columns (BLM, BLAM, CIM, CIAM)
+- **2x4 Compact Grid**: Rows (Clear-Sky, Cloudy-Sky) × Columns (B-E, B, B-E-X, B-X)
 - **2x2 All-Sky Grid**: All-Sky comparison across all models
-- **BLAM-C plots**: 1x2 grid for the context-only model
+- **B-C plots**: 1x2 grid for the context-only model
 
 **Output**: `figures/density_plots/`
 
@@ -204,7 +204,7 @@ python analysis/heatmap_plots.py
 
 Generates heatmaps comparing model performance across stations:
 
-- **Metrics**: RMSE and STD differences (BLAM - BLM, CIAM - CIM)
+- **Metrics**: RMSE and STD differences (B - B-E, B-X - B-E-X)
 - **Conditions**: Clear-Sky, Cloudy-Sky, All-Sky
 - **Ordering options**: Station ID, Elevation, or Climate Division
 
@@ -238,7 +238,7 @@ Analyzes cloud coverage patterns and model performance metrics by station:
 
 - **Cloud percentage bar charts**: Horizontal bars showing % cloudy observations
 - **Observation counts**: Total samples per station with cloud breakdown
-- **BLAM vs BLM metrics**: RMSE and STD differences per station
+- **B vs B-E metrics**: RMSE and STD differences per station
 - **Scatter plots**: Cloud percentage vs observations, colored by RMSE difference
 - **Summary statistics**: CSV export with all metrics
 
@@ -252,9 +252,9 @@ Analyzes cloud coverage patterns and model performance metrics by station:
 python analysis/hourly_daily_rmse.py
 ```
 
-Generates temporal RMSE comparisons between BLAM and BLM:
+Generates temporal RMSE comparisons between B and B-E:
 
-- **Hourly Box Plots**: Paired box plots comparing BLAM and BLM RMSE by local hour (HST)
+- **Hourly Box Plots**: Paired box plots comparing B and B-E RMSE by local hour (HST)
   - Includes secondary axis showing cloud percentage
   - Observation count tables below plots
 - **Daily Line Plots**: Daily RMSE throughout 2024 with 7-day rolling mean
@@ -295,7 +295,7 @@ Generates paired dot (slope) plots for station-level model comparisons:
 
 - **2x4 Compact Panel**:
   - Rows: Clear-Sky, Cloudy-Sky
-  - Columns: BLM vs BLAM (RMSE), BLM vs BLAM (STD), CIM vs CIAM (RMSE), CIM vs CIAM (STD)
+  - Columns: B-E vs B (RMSE), B-E vs B (STD), B-E-X vs B-X (RMSE), B-E-X vs B-X (STD)
 - **Individual metric plots**: Separate 2x2 grids for RMSE and STD
 - **Features**:
   - Wilcoxon signed-rank test p-values in titles
@@ -335,7 +335,7 @@ Performs hierarchical clustering on feature correlations:
 - **Clustermap visualization**: Seaborn clustermap with dendrograms showing feature groupings
 - **High-correlation detection**: Identifies feature pairs with |r| > 0.8
 
-**Output**: `models/xgb/BLAM/shap_analysis/`
+**Output**: `models/xgb/B/shap_analysis/`
 
 - `feature_correlation_matrix.csv`
 - `correlation_clustermap.jpg`
@@ -345,14 +345,14 @@ Performs hierarchical clustering on feature correlations:
 ### XGBoost Native SHAP Analysis
 
 ```bash
-python analysis/xgb_native_shap.py --model_type BLAM
+python analysis/xgb_native_shap.py --model_type B
 ```
 
 Computes per-station SHAP feature importance using XGBoost's native TreeSHAP:
 
 - **GPU optimized**: Uses GPU-accelerated SHAP with automatic CPU fallback
 - **Checkpointing**: Saves progress every 2 stations for resume capability
-- **All model types**: Supports `--model_type BLAM|BLM|BLAM-C|CIM|CIAM`
+- **All model types**: Supports `--model_type B|B-E|B-C|B-E-X|B-X`
 
 > [!NOTE]
 > Requires saved model files (`*.joblib`) from training. These are large files not tracked in git.
@@ -420,11 +420,11 @@ lst/
 │   └── stations/                # Station metadata
 ├── models/
 │   └── xgb/                     # XGBoost models by type
-│       ├── BLM/
-│       ├── BLAM/
-│       ├── BLAM-C/
-│       ├── CIM/
-│       └── CIAM/
+│       ├── B-E/
+│       ├── B/
+│       ├── B-C/
+│       ├── B-E-X/
+│       └── B-X/
 ├── figures/                     # Generated analysis figures
 │   ├── analysis/                # General analysis plots
 │   ├── cloud_analysis/          # Cloud percentage visualizations

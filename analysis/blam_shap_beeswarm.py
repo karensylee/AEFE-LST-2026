@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-BLAM-ALL TreeSHAP Analysis Script
+B-ALL TreeSHAP Analysis Script
 ==================================
 Computes SHAP values using XGBoost's native TreeSHAP implementation
-and generates beeswarm plots for BLAM-ALL model variants.
+and generates beeswarm plots for B-ALL model variants.
 
 Uses 10,000 samples per model variant.
 """
@@ -30,14 +30,14 @@ from config import settings
 # CONFIGURATION
 # ==============================================================================
 MODEL_DIR = os.path.join(settings.OUTPUT_DIR, 'xgb')
-OUTPUT_DIR = os.path.join(settings.OUTPUT_DIR, 'shap_analysis_blam_all')
+OUTPUT_DIR = os.path.join(settings.OUTPUT_DIR, 'shap_analysis_b_all')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Define Variants to analyze
 VARIANTS = {
-    'BLAM-ALL': {'name': 'All Sky Conditions', 'bcm_filter': None},
-    'BLAM-ALL-CLEAR': {'name': 'Clear Sky Only', 'bcm_filter': 0},
-    'BLAM-ALL-CLOUDY': {'name': 'Cloudy Sky Only', 'bcm_filter': 1}
+    'B-ALL': {'name': 'All Sky Conditions', 'bcm_filter': None},
+    'B-ALL-CLEAR': {'name': 'Clear Sky Only', 'bcm_filter': 0},
+    'B-ALL-CLOUDY': {'name': 'Cloudy Sky Only', 'bcm_filter': 1}
 }
 
 SAMPLES = 10000
@@ -49,7 +49,7 @@ RANDOM_STATE = settings.RANDOM_STATE
 def get_lazy_frame():
     """Initialize Polars LazyFrame for memory-efficient data access."""
     print("\n--- Initializing Polars LazyFrame ---")
-    features = settings.FEATURE_SETS['BLAM-ALL']
+    features = settings.FEATURE_SETS['B-ALL']
     cols_to_load = features + ['ACMC_BCM']
     
     print(f"Scanning data from: {settings.DATA_PATH}")
@@ -181,7 +181,7 @@ def plot_beeswarm(shap_values, X_df, title, filename, max_display=20):
 def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(
-        description="Compute TreeSHAP values and generate beeswarm plots for BLAM-ALL variants."
+        description="Compute TreeSHAP values and generate beeswarm plots for B-ALL variants."
     )
     parser.add_argument(
         '--models', 
@@ -193,7 +193,7 @@ def main():
     args = parser.parse_args()
     
     print("=" * 60)
-    print("BLAM-ALL TreeSHAP Analysis")
+    print("B-ALL TreeSHAP Analysis")
     print("=" * 60)
     print(f"Output Directory: {OUTPUT_DIR}")
     print(f"Samples per model: {SAMPLES:,}")

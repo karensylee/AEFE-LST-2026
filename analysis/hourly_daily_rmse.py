@@ -1,8 +1,8 @@
 """
-Hourly and Daily RMSE Analysis - BLAM vs BLM Comparison.
+Hourly and Daily RMSE Analysis - B vs B-E Comparison.
 
 This module generates publication-ready comparison figures:
-1. Hourly Box Plot: Paired box plots comparing BLAM and BLM by local hour (HST)
+1. Hourly Box Plot: Paired box plots comparing B and B-E by local hour (HST)
 2. Daily Line Plot: RMSE comparison over each day of year 2024
 
 Author: Generated for LST Analysis. #Left as is. It is true.
@@ -34,8 +34,8 @@ plt.rcParams.update({
 })
 # Model colors
 MODEL_COLORS = {
-    'BLAM': 'steelblue',
-    'BLM': 'coral'
+    'B': 'steelblue',
+    'B-E': 'coral'
 }
 
 
@@ -89,9 +89,9 @@ def load_predictions(model_name: str) -> pl.DataFrame:
 
 def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, output_dir: str) -> str:
     """
-    Create paired box plots comparing BLAM and BLM RMSE by local hour (HST).
+    Create paired box plots comparing B and B-E RMSE by local hour (HST).
     
-    For each hour, shows two side-by-side box plots (BLAM and BLM).
+    For each hour, shows two side-by-side box plots (B and B-E).
     Secondary axis shows percentage of cloudy observations.
     """
     print("\nGenerating hourly RMSE comparison box plot...")
@@ -130,7 +130,7 @@ def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
         patch_artist=True,
         showfliers=False,
         medianprops={'color': 'black', 'linewidth': 1.5},
-        boxprops={'facecolor': MODEL_COLORS['BLAM'], 'alpha': 0.7},
+        boxprops={'facecolor': MODEL_COLORS['B'], 'alpha': 0.7},
         whiskerprops={'color': 'gray'},
         capprops={'color': 'gray'}
     )
@@ -142,12 +142,12 @@ def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
         patch_artist=True,
         showfliers=False,
         medianprops={'color': 'black', 'linewidth': 1.5},
-        boxprops={'facecolor': MODEL_COLORS['BLM'], 'alpha': 0.7},
+        boxprops={'facecolor': MODEL_COLORS['B-E'], 'alpha': 0.7},
         whiskerprops={'color': 'gray'},
         capprops={'color': 'gray'}
     )
     
-    # Calculate hourly cloud percentage (use BLAM data, should be same)
+    # Calculate hourly cloud percentage (use B data, should be same)
     hourly_cloud = df_blam.group_by('hour_hst').agg([
         pl.col('ACMC_BCM').mean().alias('cloud_fraction')
     ]).sort('hour_hst')
@@ -175,8 +175,8 @@ def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     # Create legend handles
     from matplotlib.patches import Patch
     legend_elements = [
-        Patch(facecolor=MODEL_COLORS['BLAM'], alpha=0.7, label='BLAM'),
-        Patch(facecolor=MODEL_COLORS['BLM'], alpha=0.7, label='BLM'),
+        Patch(facecolor=MODEL_COLORS['B'], alpha=0.7, label='B'),
+        Patch(facecolor=MODEL_COLORS['B-E'], alpha=0.7, label='B-E'),
         plt.Line2D([0], [0], color='#505050', linestyle='--', marker='s', label='Cloud %')
     ]
     ax.legend(handles=legend_elements, loc='upper right', framealpha=1.0, facecolor='white', edgecolor='gray')
@@ -184,7 +184,7 @@ def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     plt.tight_layout()
     
     # Save figure
-    output_path = os.path.join(output_dir, 'BLAM_vs_BLM_hourly_rmse_boxplot.jpg')
+    output_path = os.path.join(output_dir, 'B_vs_B-E_hourly_rmse_boxplot.jpg')
     fig.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.show()
     plt.close(fig)
@@ -195,18 +195,18 @@ def plot_hourly_comparison_boxplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
 
 def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, output_dir: str) -> str:
     """
-    Create a line plot comparing BLAM and BLM daily RMSE throughout 2024.
+    Create a line plot comparing B and B-E daily RMSE throughout 2024.
     Secondary axis shows percentage of cloudy observations.
     """
     print("\nGenerating daily RMSE comparison line plot...")
     
-    # Calculate daily RMSE and cloud percentage for BLAM
+    # Calculate daily RMSE and cloud percentage for B
     daily_blam = df_blam.group_by('date_hst').agg([
         pl.col('squared_error').mean().sqrt().alias('rmse'),
         pl.col('ACMC_BCM').mean().alias('cloud_fraction'),
     ]).sort('date_hst')
     
-    # Calculate daily RMSE for BLM
+    # Calculate daily RMSE for B-E
     daily_blm = df_blm.group_by('date_hst').agg([
         pl.col('squared_error').mean().sqrt().alias('rmse'),
     ]).sort('date_hst')
@@ -233,8 +233,8 @@ def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     fig, ax = plt.subplots(figsize=(16, 8))
     
     # Plot RMSE lines for both models
-    ax.plot(dates_blam_dt, rmse_blam, color=MODEL_COLORS['BLAM'], linewidth=1.5, alpha=0.8, label='BLAM')
-    ax.plot(dates_blm_dt, rmse_blm, color=MODEL_COLORS['BLM'], linewidth=1.5, alpha=0.8, label='BLM')
+    ax.plot(dates_blam_dt, rmse_blam, color=MODEL_COLORS['B'], linewidth=1.5, alpha=0.8, label='B')
+    ax.plot(dates_blm_dt, rmse_blm, color=MODEL_COLORS['B-E'], linewidth=1.5, alpha=0.8, label='B-E')
     
     # Add rolling mean for each model
     window_size = 7
@@ -243,9 +243,9 @@ def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
         rolling_blm = np.convolve(rmse_blm, np.ones(window_size)/window_size, mode='valid')
         rolling_dates = dates_blam_dt[window_size-1:]
         ax.plot(rolling_dates, rolling_blam, color='darkblue', linewidth=2.5, 
-                label=f'BLAM {window_size}-Day Avg', linestyle='-')
+                label=f'B {window_size}-Day Avg', linestyle='-')
         ax.plot(rolling_dates, rolling_blm, color='darkred', linewidth=2.5, 
-                label=f'BLM {window_size}-Day Avg', linestyle='-')
+                label=f'B-E {window_size}-Day Avg', linestyle='-')
     
     # Create secondary y-axis for cloud percentage (render behind main plot elements)
     ax2 = ax.twinx()
@@ -290,7 +290,7 @@ def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     mean_cloud = np.mean(cloud_pct)
     text_box = ax.text(
         0.025, 0.975, 
-        f'BLAM Mean: {mean_blam:.2f} K\nBLM Mean: {mean_blm:.2f} K\nCloud %: {mean_cloud:.1f}',
+        f'B Mean: {mean_blam:.2f} K\nB-E Mean: {mean_blm:.2f} K\nCloud %: {mean_cloud:.1f}',
         transform=ax.transAxes,
         verticalalignment='top',
         horizontalalignment='left',
@@ -302,7 +302,7 @@ def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
     plt.tight_layout()
     
     # Save figure
-    output_path = os.path.join(output_dir, 'BLAM_vs_BLM_daily_rmse_lineplot.jpg')
+    output_path = os.path.join(output_dir, 'B_vs_B-E_daily_rmse_lineplot.jpg')
     fig.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.show()
     plt.close(fig)
@@ -312,9 +312,9 @@ def plot_daily_comparison_lineplot(df_blam: pl.DataFrame, df_blm: pl.DataFrame, 
 
 
 def main():
-    """Generate comparison figures for BLAM and BLM."""
+    """Generate comparison figures for B and B-E."""
     print("=" * 60)
-    print("BLAM vs BLM: Hourly and Daily RMSE Comparison")
+    print("B vs B-E: Hourly and Daily RMSE Comparison")
     print("=" * 60)
     
     # Create output directory
@@ -323,8 +323,8 @@ def main():
     print(f"Output directory: {output_dir}")
     
     # Load data for both models
-    df_blam = load_predictions('BLAM')
-    df_blm = load_predictions('BLM')
+    df_blam = load_predictions('B')
+    df_blm = load_predictions('B-E')
     
     # Generate comparison figures
     hourly_path = plot_hourly_comparison_boxplot(df_blam, df_blm, output_dir)

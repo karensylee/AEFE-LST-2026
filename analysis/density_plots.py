@@ -4,7 +4,7 @@ Generates:
 1. Individual plots (Clear, Cloudy, All) per model.
 2. Standard Grid (Rows: Clear, Cloudy; Cols: Models)
 3. Compact Grid (Rows: Clear, Cloudy; Cols: Models)
-4. BLAM-C Compact Grid (1 Row x 2 Cols: Clear, Cloudy)
+4. B-C Compact Grid (1 Row x 2 Cols: Clear, Cloudy)
 """
 
 import numpy as np
@@ -33,15 +33,15 @@ plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 
 # Define specific models and order for the grids
-GRID_MODELS = ['BLM', 'BLAM', 'CIM', 'CIAM', 'TTM']
+GRID_MODELS = ['B-E', 'B', 'B-E-X', 'B-X', 'TTM']
 
 # Model Title Mappings
 MODEL_TITLES = {
-    'BLM': 'BLM',
-    'BLAM': r'BLAM' + '\n' + r'$\mathit{(BLM + AEFE)}$',
-    'CIM': 'CIM',
-    'CIAM': r'CIAM' + '\n' + r'$\mathit{(CIM + AEFE)}$',
-    'BLAM-C': r'BLAM-C' + '\n' + r'$\mathit{(BLM + AEFE - CIM)}$',
+    'B-E': 'B-E',
+    'B': r'B' + '\n' + r'$\mathit{(B-E)}$',
+    'B-E-X': 'B-E-X',
+    'B-X': r'B-X' + '\n' + r'$\mathit{(B-E-X)}$',
+    'B-C': r'B-C' + '\n' + r'$\mathit{(B-E)}$',
     'TTM': 'TTM'
 }
 
@@ -158,7 +158,7 @@ def plot_individual_model_conditions(models_data, output_dir):
             title_text = f"{display_name}\n{cond_name}"
             ax.text(0.05, 0.95, title_text, transform=ax.transAxes, fontsize=20, fontweight='bold', ha='left', va='top')
             
-            if model_name == 'BLAM-C':
+            if model_name == 'B-C':
                 if cond_name == 'Clear-Sky':
                     add_subpanel_label(ax, 'a')
                 elif cond_name == 'Cloudy-Sky':
@@ -342,15 +342,15 @@ def plot_2x4_compact_publication(models_data, output_dir):
 def plot_2x2_allsky_compact(models_data, output_dir):
     """
     2 rows x 2 cols All-Sky grid with shared colorbar.
-    Top row: BLM, BLAM
-    Bottom row: CIM, CIAM
+    Top row: B-E, B
+    Bottom row: B-E-X, B-X
     """
     print("Generating 2x2 All-Sky compact grid...")
     
     # Define layout: rows × cols
     model_grid = [
-        ['BLM', 'BLAM'],
-        ['CIM', 'CIAM']
+        ['B-E', 'B'],
+        ['B-E-X', 'B-X']
     ]
     
     # Check all models are available
@@ -447,19 +447,19 @@ def plot_2x2_allsky_compact(models_data, output_dir):
     plt.show()
     plt.close(fig)
 
-# --- Function 5: BLAM-C Compact Grid (1x2) ---
+# --- Function 5: B-C Compact Grid (1x2) ---
 def plot_blam_c_2x1_compact(models_data, output_dir):
     """
-    BLAM-C 1x2 grid with log scale density and shared colorbar.
+    B-C 1x2 grid with log scale density and shared colorbar.
     """
-    print("Generating BLAM-C 1x2 compact grid...")
+    print("Generating B-C 1x2 compact grid...")
     
-    if 'BLAM-C' not in models_data:
-        print("BLAM-C data not found.")
+    if 'B-C' not in models_data:
+        print("B-C data not found.")
         return
         
-    df = models_data['BLAM-C']
-    display_name = MODEL_TITLES.get('BLAM-C', 'BLAM-C')
+    df = models_data['B-C']
+    display_name = MODEL_TITLES.get('B-C', 'B-C')
     
     conditions = [('Clear-Sky', 0), ('Cloudy-Sky', 1)]
     vmin, vmax = get_global_limits(models_data)
@@ -531,7 +531,7 @@ def plot_blam_c_2x1_compact(models_data, output_dir):
         cbar = fig.colorbar(combined_hb, cax=cbar_ax)
         cbar.set_label('Point Count')
         
-    plt.savefig(os.path.join(output_dir, 'density_grid_blam_c_1x2.jpg'), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, 'density_grid_b_c_1x2.jpg'), dpi=300, bbox_inches='tight')
     plt.show()
     plt.close(fig)
 

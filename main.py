@@ -12,13 +12,13 @@ from src import data_loader, trainer, evaluation
 def get_model_description(model_type):
     """Returns a description string for each model type."""
     descriptions = {
-        'BLM': 'Baseline Model (Auxiliary + 16 CMI bands)',
-        'BLAM': 'Baseline + AlphaEarth Foundation Embeddings (Auxiliary + 16 CMI + 64 AEFE)',
-        'BLAM-C': 'Baseline + AEFE - CMI (Auxiliary + 64 AEFE only)',
-        'CIM': 'CMI-Only Model (16 CMI bands, no auxiliary)',
-        'CIAM': 'CMI + AEFE Model (16 CMI + 64 AEFE, no auxiliary)',
+        'B-E': 'Baseline Model (Auxiliary + 16 CMI bands)',
+        'B': 'Baseline + AlphaEarth Foundation Embeddings (Auxiliary + 16 CMI + 64 AEFE)',
+        'B-C': 'Baseline + AEFE - CMI (Auxiliary + 64 AEFE only)',
+        'B-E-X': 'CMI-Only Model (16 CMI bands, no auxiliary)',
+        'B-X': 'CMI + AEFE Model (16 CMI + 64 AEFE, no auxiliary)',
         'TTM': 'TopTenModel (Top 10 features)',
-        'BLAM-ALL': 'Full BLAM Model (Trained on ALL data, no CV)',
+        'B-ALL': 'Full B Model (Trained on ALL data, no CV)',
     }
     return descriptions.get(model_type, 'Unknown Model')
 
@@ -216,7 +216,7 @@ def main():
         print(f"        {key}: {value}")
 
     # --- Training Execution Path ---
-    if args.model_type.startswith('BLAM-ALL'):
+    if args.model_type.startswith('B-ALL'):
         # === FULL DATASET TRAINING (No Cross-Validation) ===
         print(f"\n--- Starting Full Dataset Training (No CV) ---")
         print(f"Model Type: {args.model_type}")

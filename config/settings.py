@@ -40,19 +40,20 @@ CLIMATE_DIVISIONS = [
 
 # Feature Groups Definition (Must only contain numeric features for XGBoost)
 FEATURE_SETS = {
-    'BLM': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)],       # Baseline
-    'BLAM': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)] + EMBEDDINGS, # Baseline + AEFE
-    'BLAM-C': AUXILIARY_FEATURES + EMBEDDINGS,                                   # Baseline + AEFE - CMI (Embeddings + Auxiliary)
-    'CIM': CMI_BANDS,                                       # CMI Only
-    'CIAM': CMI_BANDS + EMBEDDINGS,                         # CMI + AEFE
+    'B-E': AUXILIARY_FEATURES + CMI_BANDS,                    # Baseline
+    'B': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,         # Baseline + AEFE
+    'B-C': AUXILIARY_FEATURES + EMBEDDINGS,                   # Baseline + AEFE - CMI (Embeddings + Auxiliary)
+    'B-E-X': CMI_BANDS,                                       # CMI Only
+    'B-X': CMI_BANDS + EMBEDDINGS,                            # CMI + AEFE
     'TTM': [
         'CMI_C08', 'CMI_C16', 'CMI_C09', 'CMI_C01', 'A25', 
         'CMI_C03', 'CMI_C11', 'SZA_cos', 'A05', 'A55'
     ],
-    'BLAM-ALL': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)] + EMBEDDINGS, # Full data training
-    'BLAM-ALL-CLEAR': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)] + EMBEDDINGS, # Full data clear sky
-    'BLAM-ALL-CLOUDY': AUXILIARY_FEATURES + [f'CMI_C{i:02d}' for i in range(1, 17)] + EMBEDDINGS, # Full data cloudy sky
+    'B-ALL': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,           # Full data training
+    'B-ALL-CLEAR': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,     # Full data clear sky
+    'B-ALL-CLOUDY': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,    # Full data cloudy sky
 }
+
 
 # Scaling Configuration
 # CMI bands and Elevation are typically scaled. 

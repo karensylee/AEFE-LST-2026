@@ -54,18 +54,18 @@ DIVISION_NAMES = {
 
 # Column mappings for heatmap display labels
 COLUMN_LABELS = {
-    'mean_residual_diff_emb_vs_base_all': '|Mean Resid.|\nBLAM vs BLM (All-Sky)',
-    'mean_residual_diff_emb_vs_base_clear': '|Mean Resid.|\nBLAM vs BLM (Clear-Sky)',
-    'mean_residual_diff_emb_vs_base_cloudy': '|Mean Resid.|\nBLAM vs BLM (Cloudy-Sky)',
-    'median_residual_diff_emb_vs_base_all': '|Median Resid.|\nBLAM vs BLM (All-Sky)',
-    'median_residual_diff_emb_vs_base_clear': '|Median Resid.|\nBLAM vs BLM (Clear-Sky)',
-    'median_residual_diff_emb_vs_base_cloudy': '|Median Resid.|\nBLAM vs BLM (Cloudy-Sky)',
-    'rmse_diff_emb_vs_base_all': 'RMSE\nBLAM vs BLM (All-Sky)',
-    'rmse_diff_emb_vs_base_clear': 'RMSE\nBLAM vs BLM (Clear-Sky)',
-    'rmse_diff_emb_vs_base_cloudy': 'RMSE\nBLAM vs BLM (Cloudy-Sky)',
-    'std_dev_diff_diff_emb_vs_base_all': 'STD\nBLAM vs BLM (All-Sky)',
-    'std_dev_diff_diff_emb_vs_base_clear': 'STD\nBLAM vs BLM (Clear-Sky)',
-    'std_dev_diff_diff_emb_vs_base_cloudy': 'STD\nBLAM vs BLM (Cloudy-Sky)',
+    'mean_residual_diff_emb_vs_base_all': '|Mean Resid.|\nB vs B-E (All-Sky)',
+    'mean_residual_diff_emb_vs_base_clear': '|Mean Resid.|\nB vs B-E (Clear-Sky)',
+    'mean_residual_diff_emb_vs_base_cloudy': '|Mean Resid.|\nB vs B-E (Cloudy-Sky)',
+    'median_residual_diff_emb_vs_base_all': '|Median Resid.|\nB vs B-E (All-Sky)',
+    'median_residual_diff_emb_vs_base_clear': '|Median Resid.|\nB vs B-E (Clear-Sky)',
+    'median_residual_diff_emb_vs_base_cloudy': '|Median Resid.|\nB vs B-E (Cloudy-Sky)',
+    'rmse_diff_emb_vs_base_all': 'RMSE\nB vs B-E (All-Sky)',
+    'rmse_diff_emb_vs_base_clear': 'RMSE\nB vs B-E (Clear-Sky)',
+    'rmse_diff_emb_vs_base_cloudy': 'RMSE\nB vs B-E (Cloudy-Sky)',
+    'std_dev_diff_diff_emb_vs_base_all': 'STD\nB vs B-E (All-Sky)',
+    'std_dev_diff_diff_emb_vs_base_clear': 'STD\nB vs B-E (Clear-Sky)',
+    'std_dev_diff_diff_emb_vs_base_cloudy': 'STD\nB vs B-E (Cloudy-Sky)',
 }
 
 
@@ -91,7 +91,7 @@ def load_predictions(model_type):
     Load prediction data from aggregated ALL_predictions file.
     
     Args:
-        model_type: 'BLM', 'BLAM', etc.
+        model_type: 'B-E', 'B', etc.
         
     Returns:
         DataFrame with columns: station_id, LST_true, LST_pred, ACMC_BCM
@@ -222,7 +222,7 @@ def calculate_difference_metrics(blm_metrics, blam_metrics):
     for metric in bias_metrics:
         for condition in conditions:
             col_base, col_comp = f'{metric}_{condition}', f'{metric}_{condition}_blam'
-            # (Abs(BLAM) - Abs(BLM)) -> Negative means BLAM is closer to zero
+            # (Abs(B) - Abs(B-E)) -> Negative means B is closer to zero
             diff_exprs.append(
                 (pl.col(col_comp).abs() - pl.col(col_base).abs()).alias(f'{metric}_diff_emb_vs_base_{condition}')
             )
@@ -258,7 +258,7 @@ def sort_dataframe(df, order_by='station_id', ascending=True):
 
 
 def generate_heatmap(diff_df, order_by='station_id', ascending=True, 
-                     output_dir=None, show_plot=True, baseline='BLM', compare='BLAM'):
+                     output_dir=None, show_plot=True, baseline='B-E', compare='B'):
     """
     Generate and save the comparative heatmap.
     
@@ -268,8 +268,8 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
         ascending: Sort order
         output_dir: Directory to save the figure
         show_plot: Whether to display the plot
-        baseline: Baseline model name (e.g., 'BLM', 'CIM')
-        compare: Comparison model name (e.g., 'BLAM', 'CIAM')
+        baseline: Baseline model name (e.g., 'B-E', 'B-E-X')
+        compare: Comparison model name (e.g., 'B', 'B-X')
     """
     print(f"\n--- Generating Heatmap (ordered by {order_by}, {'ascending' if ascending else 'descending'}) ---")
     
@@ -389,14 +389,14 @@ def main():
     parser.add_argument(
         '--baseline', 
         type=str, 
-        default='BLM',
-        help="Baseline model (default: BLM)"
+        default='B-E',
+        help="Baseline model (default: B-E)"
     )
     parser.add_argument(
         '--compare', 
         type=str, 
-        default='BLAM',
-        help="Comparison model (default: BLAM)"
+        default='B',
+        help="Comparison model (default: B)"
     )
     parser.add_argument(
         '--order_by', 

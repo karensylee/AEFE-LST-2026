@@ -1,10 +1,10 @@
 """
-Cloud Percentage by Station Analysis with BLAM vs BLM Metrics.
+Cloud Percentage by Station Analysis with B vs B-E Metrics.
 
 This script visualizes:
 1. Cloud percentage per station (horizontal bar chart)
 2. Total observations per station
-3. RMSE and STD differences (BLAM - BLM) per station
+3. RMSE and STD differences (B - B-E) per station
 4. Summary statistics
 """
 
@@ -88,25 +88,25 @@ def compute_combined_stats(df_blam: pl.DataFrame, df_blm: pl.DataFrame) -> pl.Da
     """
     Compute combined statistics from both models.
     
-    Returns DataFrame with cloud stats and RMSE/STD differences (BLAM - BLM).
+    Returns DataFrame with cloud stats and RMSE/STD differences (B - B-E).
     """
     # Compute metrics for each model
-    stats_blam = compute_station_metrics(df_blam, 'BLAM')
-    stats_blm = compute_station_metrics(df_blm, 'BLM')
+    stats_blam = compute_station_metrics(df_blam, 'B')
+    stats_blm = compute_station_metrics(df_blm, 'B-E')
     
-    # Keep cloud stats from BLAM (should be same as BLM)
+    # Keep cloud stats from B (should be same as B-E)
     cloud_cols = ['station_id', 'total_obs', 'cloudy_obs', 'clear_obs', 'cloud_pct']
     
-    # Select only RMSE/STD from BLM stats
-    blm_metrics = stats_blm.select(['station_id', 'rmse_BLM', 'std_BLM'])
+    # Select only RMSE/STD from B-E stats
+    blm_metrics = stats_blm.select(['station_id', 'rmse_B-E', 'std_B-E'])
     
     # Join and compute differences
     combined = stats_blam.join(blm_metrics, on='station_id', how='inner')
     
-    # Calculate differences (BLAM - BLM): negative = BLAM is better
+    # Calculate differences (B - B-E): negative = B is better
     combined = combined.with_columns([
-        (pl.col('rmse_BLAM') - pl.col('rmse_BLM')).alias('rmse_diff'),
-        (pl.col('std_BLAM') - pl.col('std_BLM')).alias('std_diff')
+        (pl.col('rmse_B') - pl.col('rmse_B-E')).alias('rmse_diff'),
+        (pl.col('std_B') - pl.col('std_B-E')).alias('std_diff')
     ])
     
     # Sort by cloud percentage (most cloudy first)
@@ -252,7 +252,7 @@ def plot_observations_by_station(stats: pl.DataFrame, output_dir: str) -> str:
     # Labels and title
     ax.set_xlabel('Total Observations')
     ax.set_ylabel('Station ID')
-    ax.set_title('Total Observations by Station with BLAM vs BLM Performance\n(colored by cloud %, sorted by obs count)', 
+    ax.set_title('Total Observations by Station with B vs B-E Performance\n(colored by cloud %, sorted by obs count)', 
                  fontweight='bold', fontsize=12)
     ax.grid(axis='x', alpha=0.3)
     
@@ -315,14 +315,14 @@ def plot_cloud_vs_observations_scatter(stats: pl.DataFrame, output_dir: str) -> 
     # Labels and title
     ax.set_xlabel('Total Observations')
     ax.set_ylabel('Cloud Percentage (%)')
-    ax.set_title('Cloud % vs. Observations (colored by ΔRMSE)\nBlue = BLAM better, Red = BLM better', 
+    ax.set_title('Cloud % vs. Observations (colored by ΔRMSE)\nBlue = B better, Red = B-E better', 
                  fontweight='bold')
     ax.grid(alpha=0.3)
     ax.set_ylim(0, 100)
     
     # Add colorbar
     cbar = plt.colorbar(scatter, ax=ax, shrink=0.8)
-    cbar.set_label('ΔRMSE (BLAM - BLM) [K]', fontsize=10)
+    cbar.set_label('ΔRMSE (B - B-E) [K]', fontsize=10)
     
     # Add reference lines for mean values
     mean_cloud = df_plot['cloud_pct'].mean()
@@ -345,7 +345,7 @@ def plot_cloud_vs_observations_scatter(stats: pl.DataFrame, output_dir: str) -> 
 def print_summary_table(stats: pl.DataFrame):
     """Print a summary table of cloud and performance statistics by station."""
     print("\n" + "=" * 100)
-    print("CLOUD & PERFORMANCE STATISTICS BY STATION (BLAM vs BLM)")
+    print("CLOUD & PERFORMANCE STATISTICS BY STATION (B vs B-E)")
     print("=" * 100)
     print(f"{'Station':<10} {'Total Obs':>12} {'Cloudy':>10} {'Clear':>10} {'Cloud %':>8} {'ΔRMSE':>10} {'ΔSTD':>10}")
     print("-" * 100)
@@ -370,7 +370,7 @@ def print_summary_table(stats: pl.DataFrame):
     print(f"{'MEAN/TOTAL':<10} {total_obs:>12,} {total_cloudy:>10,.0f} {total_clear:>10,.0f} "
           f"{overall_cloud_pct:>7.1f}% {mean_rmse_diff:>+9.4f}K {mean_std_diff:>+9.4f}K")
     print("=" * 100)
-    print("Note: Negative ΔRMSE/ΔSTD means BLAM outperforms BLM")
+    print("Note: Negative ΔRMSE/ΔSTD means B outperforms B-E")
 
 
 def save_stats_csv(stats: pl.DataFrame, output_dir: str) -> str:
@@ -382,9 +382,9 @@ def save_stats_csv(stats: pl.DataFrame, output_dir: str) -> str:
 
 
 def main():
-    """Generate cloud percentage by station visualizations with BLAM vs BLM metrics."""
+    """Generate cloud percentage by station visualizations with B vs B-E metrics."""
     print("=" * 60)
-    print("Cloud Percentage by Station Analysis (BLAM vs BLM)")
+    print("Cloud Percentage by Station Analysis (B vs B-E)")
     print("=" * 60)
     
     # Create output directory
@@ -393,8 +393,8 @@ def main():
     print(f"Output directory: {output_dir}")
     
     # Load predictions for both models
-    df_blam = load_predictions('BLAM')
-    df_blm = load_predictions('BLM')
+    df_blam = load_predictions('B')
+    df_blm = load_predictions('B-E')
     
     # Compute combined station-level statistics
     print("\nComputing per-station metrics...")
