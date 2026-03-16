@@ -51,7 +51,7 @@ COASTLINE_PATH = os.path.join(settings.BASE_DIR, 'datasets/other/Coastline/Coast
 # Configuration
 STATIONS_PATH = os.path.join(settings.BASE_DIR, 'datasets/stations/stations_aef_hiclimatedivision.csv')
 CONDITIONS = [('Clear-Sky', 0), ('Cloudy-Sky', 1), ('All-Sky', None)]
-MODELS = ['B-E', 'B', 'B-E-X', 'B-X']
+MODELS = ['SX', 'SXE', 'S', 'SE']
 
 
 def load_stations():

@@ -40,18 +40,10 @@ CLIMATE_DIVISIONS = [
 
 # Feature Groups Definition (Must only contain numeric features for XGBoost)
 FEATURE_SETS = {
-    'B-E': AUXILIARY_FEATURES + CMI_BANDS,                    # Baseline
-    'B': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,         # Baseline + AEFE
-    'B-C': AUXILIARY_FEATURES + EMBEDDINGS,                   # Baseline + AEFE - CMI (Embeddings + Auxiliary)
-    'B-E-X': CMI_BANDS,                                       # CMI Only
-    'B-X': CMI_BANDS + EMBEDDINGS,                            # CMI + AEFE
-    'TTM': [
-        'CMI_C08', 'CMI_C16', 'CMI_C09', 'CMI_C01', 'A25', 
-        'CMI_C03', 'CMI_C11', 'SZA_cos', 'A05', 'A55'
-    ],
-    'B-ALL': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,           # Full data training
-    'B-ALL-CLEAR': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,     # Full data clear sky
-    'B-ALL-CLOUDY': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,    # Full data cloudy sky
+    'SX': AUXILIARY_FEATURES + CMI_BANDS,                     # Baseline
+    'SXE': AUXILIARY_FEATURES + CMI_BANDS + EMBEDDINGS,       # Baseline + AEFE
+    'S': CMI_BANDS,                                           # CMI Only
+    'SE': CMI_BANDS + EMBEDDINGS,                             # CMI + AEFE
 }
 
 

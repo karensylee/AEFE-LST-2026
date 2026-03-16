@@ -4,7 +4,7 @@ Generates:
 1. Individual plots (Clear, Cloudy, All) per model.
 2. Standard Grid (Rows: Clear, Cloudy; Cols: Models)
 3. Compact Grid (Rows: Clear, Cloudy; Cols: Models)
-4. B-C Compact Grid (1 Row x 2 Cols: Clear, Cloudy)
+4. SXE-C Compact Grid (1 Row x 2 Cols: Clear, Cloudy)
 """
 
 import numpy as np
@@ -33,16 +33,14 @@ plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 
 # Define specific models and order for the grids
-GRID_MODELS = ['B', 'B-E', 'B-X', 'B-E-X', 'TTM']
+GRID_MODELS = ['SXE', 'SX', 'SE', 'S']
 
 # Model Title Mappings
 MODEL_TITLES = {
-    'B-E': 'B-E',
-    'B': 'B',
-    'B-E-X': 'B-E-X',
-    'B-X': 'B-X',
-    'B-C': 'B-C',
-    'TTM': 'TTM'
+    'SX': 'SX',
+    'SXE': 'SXE',
+    'S': 'S',
+    'SE': 'SE',
 }
 
 def calculate_metrics(df, true_col='LST_true', pred_col='LST_pred'):
@@ -103,9 +101,8 @@ def plot_density_hexbin(ax, subset, vmin, vmax, cmap='plasma', use_log=False, no
 def add_stats_text(ax, metrics, fontsize=20, loc='lower right'):
     stats_text = (
         f"$R^2$ = {metrics['r2']:.2f}\n"
-        f"RMSE = {metrics['rmse']:.2f}\n"
-        f"Mean Bias = {metrics['bias']:.2f}\n"
-        f"STD = {metrics['error_std']:.2f}"
+        f"RMSE (K) = {metrics['rmse']:.2f}\n"
+        f"Mean Bias (K) = {metrics['bias']:.2f}"
     )
     
     if loc == 'lower right':
@@ -158,7 +155,7 @@ def plot_individual_model_conditions(models_data, output_dir):
             title_text = f"{display_name}\n{cond_name}"
             ax.text(0.05, 0.95, title_text, transform=ax.transAxes, fontsize=20, fontweight='bold', ha='left', va='top')
             
-            if model_name == 'B-C':
+            if model_name == 'SXE-C':
                 if cond_name == 'Clear-Sky':
                     add_subpanel_label(ax, 'a')
                 elif cond_name == 'Cloudy-Sky':
@@ -349,8 +346,8 @@ def plot_2x2_allsky_compact(models_data, output_dir):
     
     # Define layout: rows × cols
     model_grid = [
-        ['B', 'B-E'],
-        ['B-X', 'B-E-X']
+        ['SXE', 'SX'],
+        ['SE', 'S']
     ]
     
     # Check all models are available
@@ -448,18 +445,18 @@ def plot_2x2_allsky_compact(models_data, output_dir):
     plt.close(fig)
 
 # --- Function 5: B-C Compact Grid (1x2) ---
-def plot_blam_c_2x1_compact(models_data, output_dir):
+def plot_sxe_c_2x1_compact(models_data, output_dir):
     """
-    B-C 1x2 grid with log scale density and shared colorbar.
+    SXE-C 1x2 grid with log scale density and shared colorbar.
     """
-    print("Generating B-C 1x2 compact grid...")
+    print("Generating SXE-C 1x2 compact grid...")
     
-    if 'B-C' not in models_data:
-        print("B-C data not found.")
+    if 'SXE-C' not in models_data:
+        print("SXE-C data not found.")
         return
         
-    df = models_data['B-C']
-    display_name = MODEL_TITLES.get('B-C', 'B-C')
+    df = models_data['SXE-C']
+    display_name = MODEL_TITLES.get('SXE-C', 'SXE-C')
     
     conditions = [('Clear-Sky', 0), ('Cloudy-Sky', 1)]
     vmin, vmax = get_global_limits(models_data)
@@ -531,7 +528,7 @@ def plot_blam_c_2x1_compact(models_data, output_dir):
         cbar = fig.colorbar(combined_hb, cax=cbar_ax)
         cbar.set_label('Point Count')
         
-    plt.savefig(os.path.join(output_dir, 'density_grid_b_c_1x2.jpg'), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, 'density_grid_sxe_c_1x2.jpg'), dpi=300, bbox_inches='tight')
     plt.show()
     plt.close(fig)
 
@@ -567,7 +564,7 @@ def main():
     # Generate compact grids only
     plot_2x4_compact_publication(models_data, output_dir)
     plot_2x2_allsky_compact(models_data, output_dir)
-    plot_blam_c_2x1_compact(models_data, output_dir)
+
     
     print("All tasks completed.")
 

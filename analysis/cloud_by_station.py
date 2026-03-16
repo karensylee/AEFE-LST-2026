@@ -91,8 +91,8 @@ def compute_combined_stats(df_blam: pl.DataFrame, df_blm: pl.DataFrame) -> pl.Da
     Returns DataFrame with cloud stats and RMSE/STD differences (B - B-E).
     """
     # Compute metrics for each model
-    stats_blam = compute_station_metrics(df_blam, 'B')
-    stats_blm = compute_station_metrics(df_blm, 'B-E')
+    stats_blam = compute_station_metrics(df_blam, 'SXE')
+    stats_blm = compute_station_metrics(df_blm, 'SX')
     
     # Keep cloud stats from B (should be same as B-E)
     cloud_cols = ['station_id', 'total_obs', 'cloudy_obs', 'clear_obs', 'cloud_pct']
@@ -393,8 +393,8 @@ def main():
     print(f"Output directory: {output_dir}")
     
     # Load predictions for both models
-    df_blam = load_predictions('B')
-    df_blm = load_predictions('B-E')
+    df_blam = load_predictions('SXE')
+    df_blm = load_predictions('SX')
     
     # Compute combined station-level statistics
     print("\nComputing per-station metrics...")

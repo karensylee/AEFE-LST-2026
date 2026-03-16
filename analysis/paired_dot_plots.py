@@ -1,9 +1,9 @@
 """
 Paired Dot Plot Visualizations for LST Model Comparisons
 
-Generates 2x4 compact panel of paired dot plots matching density_plots.py style.
+Generates 2x2 compact panel of paired dot plots matching density_plots.py style.
 Rows: Clear-Sky, Cloudy-Sky
-Cols: B-E vs B (RMSE), B-E vs B (STD), B-E-X vs B-X (RMSE), B-E-X vs B-X (STD)
+Cols: SX vs SXE (RMSE), S vs SE (RMSE)
 """
 
 import os
@@ -18,7 +18,7 @@ from scipy import stats
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config import settings
-from analysis.statistical_analysis import load_data, calculate_station_metrics, METRICS, CONDITIONS, COMPARISONS
+from analysis.statistical_analysis import load_data, calculate_station_metrics, CONDITIONS, COMPARISONS
 
 # --- Configuration (matching density_plots.py template) ---
 plt.rcParams['font.family'] = 'serif'
@@ -28,7 +28,7 @@ plt.rcParams['axes.linewidth'] = 1.0
 plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 
-def paired_dot_plot(ax, data1, data2, labels, title, ylabel, p_value, metric_type='RMSE', show_legend=False, label_char=None):
+def paired_dot_plot(ax, data1, data2, labels, title, ylabel, p_value, n_stations=None, show_legend=False, label_char=None):
     m1, m2 = np.mean(data1), np.mean(data2)
     n, d1, d2 = len(data1), np.array(data1), np.array(data2)
     colors = np.where(d2 < d1, '#2ecc71', '#e74c3c')
@@ -46,7 +46,8 @@ def paired_dot_plot(ax, data1, data2, labels, title, ylabel, p_value, metric_typ
     ax.set_ylabel(ylabel, fontsize=22)
     
     p_str = (p_value < 0.001 and "p < 0.001") or f"p = {p_value:.4f}"
-    ax.set_title(f"{metric_type}: {labels[0]} vs {labels[1]}\nWilcoxon {p_str}", fontsize=16, fontweight='bold', pad=25)
+    n_str = f" (n = {n_stations} stations)" if n_stations else ""
+    ax.set_title(f"{title}", fontsize=14, fontweight='bold', pad=22)
     
     n_imp = np.sum(d2 < d1)
     ax.text(0.22, 1.05, f"Improvement: {n_imp}/{n}", transform=ax.transAxes, color='#1a7f37', fontsize=15, fontweight='bold', ha='center', va='top')
@@ -62,28 +63,25 @@ def paired_dot_plot(ax, data1, data2, labels, title, ylabel, p_value, metric_typ
     
     ax.grid(True, alpha=0.3, axis='y')
 
-def plot_2x4_compact_panel(models_data, output_dir):
+def plot_2x2_compact_panel(models_data, output_dir):
     """
-    Generate 2x4 compact panel of paired dot plots.
+    Generate 2x2 compact panel of paired dot plots (RMSE only).
     Rows: Clear-Sky, Cloudy-Sky
-    Cols: B-E vs B (RMSE), B-E vs B (STD), B-E-X vs B-X (RMSE), B-E-X vs B-X (STD)
+    Cols: SX vs SXE (RMSE), S vs SE (RMSE)
     """
-    print("Generating 2x4 compact paired dot panel...")
+    print("Generating 2x2 compact paired dot panel...")
     
     fig_dir = os.path.join(output_dir, 'statistical_tests')
     os.makedirs(fig_dir, exist_ok=True)
     
-    # Layout: 2 rows (conditions) x 4 cols (comparison+metric combos)
-    # Cols: (B-E,B,rmse), (B-E,B,std), (B-E-X,B-X,rmse), (B-E-X,B-X,std)
+    # Layout: 2 rows (conditions) x 2 cols (RMSE comparisons only)
     column_configs = [
-        (COMPARISONS[0], 'rmse'),  # B-E vs B RMSE
-        (COMPARISONS[0], 'std'),   # B-E vs B STD
-        (COMPARISONS[1], 'rmse'),  # B-E-X vs B-X RMSE
-        (COMPARISONS[1], 'std'),   # B-E-X vs B-X STD
+        (COMPARISONS[0], 'rmse'),  # SX vs SXE RMSE
+        (COMPARISONS[1], 'rmse'),  # S vs SE RMSE
     ]
     
-    fig, axes = plt.subplots(2, 4, figsize=(26, 14))
-    plt.subplots_adjust(wspace=0.22, hspace=0.25, bottom=0.06, left=0.05, right=0.98, top=0.88)
+    fig, axes = plt.subplots(2, 2, figsize=(14, 14))
+    plt.subplots_adjust(wspace=0.22, hspace=0.25, bottom=0.06, left=0.08, right=0.98, top=0.88)
     
     labels = list(string.ascii_lowercase)
     label_idx = 0
@@ -105,18 +103,17 @@ def plot_2x4_compact_panel(models_data, output_dir):
             v2 = joined[f'{metric}_m2'].to_numpy()
             _, p_val = stats.wilcoxon(v1, v2)
             
-            # Show legend only on top-right (row 0, col 3)
-            show_legend = (row_idx == 0 and col_idx == 3)
+            # Show legend only on top-right (row 0, col 1)
+            show_legend = (row_idx == 0 and col_idx == 1)
             
-            title = f'{m1_name} vs {m2_name} ({cond_name})'
-            ylabel = f'{metric.upper()} (K)'
-            metric_type = f'{metric.upper()} ({cond_name})'
+            title = f'{m1_name} vs {m2_name}\n{cond_name}'
+            ylabel = 'Station-level RMSE (K)'
             
             paired_dot_plot(ax, v1, v2, [m1_name, m2_name], title, ylabel, p_val, 
-                           metric_type=metric_type, show_legend=show_legend, label_char=labels[label_idx])
+                           n_stations=len(v1), show_legend=show_legend, label_char=labels[label_idx])
             label_idx += 1
     
-    out_path = os.path.join(fig_dir, 'paired_dot_2x4_compact.jpg')
+    out_path = os.path.join(fig_dir, 'paired_dot_2x2_compact.jpg')
     plt.savefig(out_path, dpi=600, bbox_inches='tight')
     plt.show()
     plt.close(fig)
@@ -172,8 +169,8 @@ def main():
     
     output_dir = settings.FIGURES_DIR
     
-    # Generate the new 2x4 compact panel
-    plot_2x4_compact_panel(models_data, output_dir)
+    # Generate the new 2x2 compact panel (RMSE only)
+    plot_2x2_compact_panel(models_data, output_dir)
     
     print("\nAll paired dot plots generated.")
 

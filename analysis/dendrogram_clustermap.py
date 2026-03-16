@@ -24,7 +24,7 @@ np.random.seed(RANDOM_STATE)
 # Adjusted paths for local environment
 DATA_PATH = '/home/ksylee/projects/lst/datasets/processed/ML_READY_mesonet_goes_embeddings_2024.csv'
 # Using the standard model directory for analysis outputs if it exists, otherwise figures
-base_model_dir = '/home/ksylee/projects/lst/models/xgb/B'
+base_model_dir = '/home/ksylee/projects/lst/models/xgb/SXE'
 if os.path.exists(base_model_dir):
     OUTPUT_DIR = os.path.join(base_model_dir, 'shap_analysis')
 else:

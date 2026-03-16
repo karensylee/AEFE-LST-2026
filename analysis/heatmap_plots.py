@@ -54,18 +54,15 @@ DIVISION_NAMES = {
 
 # Column mappings for heatmap display labels
 COLUMN_LABELS = {
-    'mean_residual_diff_emb_vs_base_all': '|Mean Resid.|\nB vs B-E (All-Sky)',
-    'mean_residual_diff_emb_vs_base_clear': '|Mean Resid.|\nB vs B-E (Clear-Sky)',
-    'mean_residual_diff_emb_vs_base_cloudy': '|Mean Resid.|\nB vs B-E (Cloudy-Sky)',
-    'median_residual_diff_emb_vs_base_all': '|Median Resid.|\nB vs B-E (All-Sky)',
-    'median_residual_diff_emb_vs_base_clear': '|Median Resid.|\nB vs B-E (Clear-Sky)',
-    'median_residual_diff_emb_vs_base_cloudy': '|Median Resid.|\nB vs B-E (Cloudy-Sky)',
-    'rmse_diff_emb_vs_base_all': 'RMSE\nB vs B-E (All-Sky)',
-    'rmse_diff_emb_vs_base_clear': 'RMSE\nB vs B-E (Clear-Sky)',
-    'rmse_diff_emb_vs_base_cloudy': 'RMSE\nB vs B-E (Cloudy-Sky)',
-    'std_dev_diff_diff_emb_vs_base_all': 'STD\nB vs B-E (All-Sky)',
-    'std_dev_diff_diff_emb_vs_base_clear': 'STD\nB vs B-E (Clear-Sky)',
-    'std_dev_diff_diff_emb_vs_base_cloudy': 'STD\nB vs B-E (Cloudy-Sky)',
+    'mean_residual_diff_emb_vs_base_all': '|Mean Resid.|\nSXE vs SX (All-Sky)',
+    'mean_residual_diff_emb_vs_base_clear': '|Mean Resid.|\nSXE vs SX (Clear-Sky)',
+    'mean_residual_diff_emb_vs_base_cloudy': '|Mean Resid.|\nSXE vs SX (Cloudy-Sky)',
+    'median_residual_diff_emb_vs_base_all': '|Median Resid.|\nSXE vs SX (All-Sky)',
+    'median_residual_diff_emb_vs_base_clear': '|Median Resid.|\nSXE vs SX (Clear-Sky)',
+    'median_residual_diff_emb_vs_base_cloudy': '|Median Resid.|\nSXE vs SX (Cloudy-Sky)',
+    'rmse_diff_emb_vs_base_all': 'RMSE\nSXE vs SX (All-Sky)',
+    'rmse_diff_emb_vs_base_clear': 'RMSE\nSXE vs SX (Clear-Sky)',
+    'rmse_diff_emb_vs_base_cloudy': 'RMSE\nSXE vs SX (Cloudy-Sky)',
 }
 
 
@@ -91,7 +88,7 @@ def load_predictions(model_type):
     Load prediction data from aggregated ALL_predictions file.
     
     Args:
-        model_type: 'B-E', 'B', etc.
+        model_type: 'SX', 'SXE', etc.
         
     Returns:
         DataFrame with columns: station_id, LST_true, LST_pred, ACMC_BCM
@@ -202,8 +199,8 @@ def calculate_difference_metrics(blm_metrics, blam_metrics):
     """
     joined = blm_metrics.join(blam_metrics, on='station_id', suffix='_blam')
     
-    # Define metrics that are always positive (RMSE, STD)
-    error_metrics = ['rmse', 'std_dev_diff']
+    # Define metrics that are always positive (RMSE)
+    error_metrics = ['rmse']
     # Define metrics that can be negative (Bias)
     bias_metrics = ['mean_residual', 'median_residual']
     
@@ -222,7 +219,7 @@ def calculate_difference_metrics(blm_metrics, blam_metrics):
     for metric in bias_metrics:
         for condition in conditions:
             col_base, col_comp = f'{metric}_{condition}', f'{metric}_{condition}_blam'
-            # (Abs(B) - Abs(B-E)) -> Negative means B is closer to zero
+            # (Abs(SXE) - Abs(SX)) -> Negative means SXE is closer to zero
             diff_exprs.append(
                 (pl.col(col_comp).abs() - pl.col(col_base).abs()).alias(f'{metric}_diff_emb_vs_base_{condition}')
             )
@@ -258,7 +255,7 @@ def sort_dataframe(df, order_by='station_id', ascending=True):
 
 
 def generate_heatmap(diff_df, order_by='station_id', ascending=True, 
-                     output_dir=None, show_plot=True, baseline='B-E', compare='B'):
+                     output_dir=None, show_plot=True, baseline='SX', compare='SXE'):
     """
     Generate and save the comparative heatmap.
     
@@ -268,8 +265,8 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
         ascending: Sort order
         output_dir: Directory to save the figure
         show_plot: Whether to display the plot
-        baseline: Baseline model name (e.g., 'B-E', 'B-E-X')
-        compare: Comparison model name (e.g., 'B', 'B-X')
+        baseline: Baseline model name (e.g., 'SX', 'S')
+        compare: Comparison model name (e.g., 'SXE', 'SE')
     """
     print(f"\n--- Generating Heatmap (ordered by {order_by}, {'ascending' if ascending else 'descending'}) ---")
     
@@ -306,7 +303,7 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
     
     # Order columns by metric type
     ordered_cols = []
-    metrics = ['mean_residual', 'median_residual', 'rmse', 'std_dev_diff']
+    metrics = ['mean_residual', 'median_residual', 'rmse']
     conditions = ['all', 'clear', 'cloudy']
     
     for metric in metrics:
@@ -356,7 +353,7 @@ def generate_heatmap(diff_df, order_by='station_id', ascending=True,
         tick_label.set_fontweight('bold')
     
     # Add vertical dividers between metric groups
-    metric_group_indices = [3, 6, 9]
+    metric_group_indices = [3, 6]
     for idx in metric_group_indices:
         if idx < len(heatmap_data.columns):
             ax.axvline(idx, color='black', linestyle=':', linewidth=2)
@@ -389,14 +386,14 @@ def main():
     parser.add_argument(
         '--baseline', 
         type=str, 
-        default='B-E',
-        help="Baseline model (default: B-E)"
+        default='SX',
+        help="Baseline model (default: SX)"
     )
     parser.add_argument(
         '--compare', 
         type=str, 
-        default='B',
-        help="Comparison model (default: B)"
+        default='SXE',
+        help="Comparison model (default: SXE)"
     )
     parser.add_argument(
         '--order_by', 
