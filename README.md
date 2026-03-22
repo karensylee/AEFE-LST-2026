@@ -169,13 +169,9 @@ The project includes comprehensive analysis scripts for evaluating model perform
 | `analysis/density_plots.py` | Density scatter plots (True vs Predicted LST) | `figures/density_plots/` |
 | `analysis/heatmap_plots.py` | Station-level error metric heatmaps | `figures/heatmaps/` |
 | `analysis/gantt_chart.py` | Temporal data availability visualization | `figures/analysis/` |
-| `analysis/cloud_by_station.py` | Cloud percentage and SXE vs SX metrics by station | `figures/cloud_analysis/` |
 | `analysis/hourly_daily_rmse.py` | Hourly and daily RMSE temporal analysis | `figures/rmse_temporal/` |
-| `analysis/morans_i.py` | Moran's I spatial autocorrelation analysis | `figures/morans_i/` |
 | `analysis/paired_dot_plots.py` | Paired dot (slope) plots for model comparisons | `figures/statistical_tests/` |
 | `analysis/statistical_analysis.py` | Core statistical functions and metrics export | `figures/statistical_tests/` |
-| `analysis/dendrogram_clustermap.py` | Feature correlation clustering analysis | `models/xgb/SXE/shap_analysis/` |
-| `analysis/xgb_native_shap.py` | Per-station SHAP analysis (GPU optimized) | `models/xgb/{MODEL}/shap_analysis/` |
 
 ---
 
@@ -227,24 +223,6 @@ Visualizes temporal data availability for all stations throughout 2024:
 
 ---
 
-### Cloud Analysis by Station
-
-```bash
-python analysis/cloud_by_station.py
-```
-
-Analyzes cloud coverage patterns and model performance metrics by station:
-
-- **Cloud percentage bar charts**: Horizontal bars showing % cloudy observations
-- **Observation counts**: Total samples per station with cloud breakdown
-- **SXE vs SX metrics**: RMSE and STD differences per station
-- **Scatter plots**: Cloud percentage vs observations, colored by RMSE difference
-- **Summary statistics**: CSV export with all metrics
-
-**Output**: `figures/cloud_analysis/`
-
----
-
 ### Hourly & Daily RMSE Analysis
 
 ```bash
@@ -261,26 +239,6 @@ Generates temporal RMSE comparisons between SXE and SX:
   - Monthly observation count tables
 
 **Output**: `figures/rmse_temporal/`
-
----
-
-### Moran's I Spatial Autocorrelation
-
-```bash
-python analysis/morans_i.py
-```
-
-Performs Global and Local Moran's I analysis on model residuals:
-
-- **Global Moran's I**: Assesses overall spatial clustering of errors
-- **Local Moran's I (LISA)**: Identifies local clusters (High-High, Low-Low, etc.)
-- **Visualizations**:
-  - Moran scatterplots
-  - LISA cluster maps overlaid on Hawaiian islands
-- **Metrics analyzed**: RMSE, MAE, Bias, STD
-- **Weight types**: Inverse distance, KNN, distance band
-
-**Output**: `figures/morans_i/`
 
 ---
 
@@ -321,47 +279,6 @@ Core statistical module for computing and exporting model metrics:
 **Output**: `figures/statistical_tests/model_metrics_summary.csv`
 
 ---
-
-### Dendrogram Clustermap (Feature Correlation)
-
-```bash
-python analysis/dendrogram_clustermap.py
-```
-
-Performs hierarchical clustering on feature correlations:
-
-- **Correlation matrix**: Computes pairwise correlations between all features (CMI, AEFE, Auxiliary)
-- **Clustermap visualization**: Seaborn clustermap with dendrograms showing feature groupings
-- **High-correlation detection**: Identifies feature pairs with |r| > 0.8
-
-**Output**: `models/xgb/SXE/shap_analysis/`
-
-- `feature_correlation_matrix.csv`
-- `correlation_clustermap.jpg`
-
----
-
-### XGBoost Native SHAP Analysis
-
-```bash
-python analysis/xgb_native_shap.py --model_type SXE
-```
-
-Computes per-station SHAP feature importance using XGBoost's native TreeSHAP:
-
-- **GPU optimized**: Uses GPU-accelerated SHAP with automatic CPU fallback
-- **Checkpointing**: Saves progress every 2 stations for resume capability
-- **All model types**: Supports `--model_type SXE|SX|SXE-C|S|SE`
-
-> [!NOTE]
-> Requires saved model files (`*.joblib`) from training. These are large files not tracked in git.
-
-**Output**: `models/xgb/{MODEL}/shap_analysis/`
-
-- `shap_checkpoint.csv` (incremental)
-- `station_shap_importance_final.csv`
-
----
 <!-- currently deprecated -->
 <!-- ## Data Aggregation
 
@@ -400,17 +317,11 @@ lst/
 │   └── station_processing.py    # Station data utilities
 ├── analysis/
 │   ├── density_plots.py         # Density scatter plots
-│   ├── heatmap_plots.py         # Station metric heatmaps
 │   ├── gantt_chart.py           # Data availability visualization
-│   ├── cloud_by_station.py      # Cloud analysis with metrics
+│   ├── heatmap_plots.py         # Station metric heatmaps
 │   ├── hourly_daily_rmse.py     # Temporal RMSE analysis
-│   ├── morans_i.py              # Spatial autocorrelation analysis
 │   ├── paired_dot_plots.py      # Statistical visualization
-│   ├── statistical_analysis.py  # Core statistical functions
-│   ├── dendrogram_clustermap.py # Feature correlation clustering
-│   ├── xgb_native_shap.py       # Per-station SHAP analysis (GPU)
-│   ├── inspect_goes18.py        # GOES-18 data inspection
-│   └── inspect_goes18_acmc.py   # ACMC cloud mask inspection
+│   └── statistical_analysis.py  # Core statistical functions
 ├── notebooks/
 │   └── example_gantt_chart.ipynb  # Example Jupyter notebook
 ├── datasets/
@@ -426,10 +337,8 @@ lst/
 │       └── SE/
 ├── figures/                     # Generated analysis figures
 │   ├── analysis/                # General analysis plots
-│   ├── cloud_analysis/          # Cloud percentage visualizations
 │   ├── density_plots/           # Density scatter plots
 │   ├── heatmaps/                # Station heatmaps
-│   ├── morans_i/                # Spatial autocorrelation plots
 │   ├── rmse_temporal/           # Hourly/daily RMSE plots
 │   └── statistical_tests/       # Statistical visualizations & CSVs
 ├── download.py                  # Ground data download
@@ -448,9 +357,7 @@ Run all analysis scripts after training:
 python analysis/density_plots.py
 python analysis/heatmap_plots.py
 python analysis/gantt_chart.py
-python analysis/cloud_by_station.py
 python analysis/hourly_daily_rmse.py
-python analysis/morans_i.py
 python analysis/paired_dot_plots.py
 python analysis/statistical_analysis.py
 ```
@@ -461,9 +368,7 @@ Or run them sequentially:
 python analysis/density_plots.py && \
 python analysis/heatmap_plots.py && \
 python analysis/gantt_chart.py && \
-python analysis/cloud_by_station.py && \
 python analysis/hourly_daily_rmse.py && \
-python analysis/morans_i.py && \
 python analysis/paired_dot_plots.py && \
 python analysis/statistical_analysis.py
 ```
